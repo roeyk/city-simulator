@@ -9,6 +9,13 @@ from city_simulator.agents import (
     living_conditions_for,
 )
 from city_simulator.derived import active_delayed_effects
+from city_simulator.person_generator import (
+    FamilyGenerationSpec,
+    GeneratedFamily,
+    GeneratedFamilyPopulation,
+    generate_family_agents,
+    generate_family_population,
+)
 from city_simulator.simulation import (
     ANNUAL_TURN_STEPS,
     advance_year,
@@ -51,7 +58,10 @@ __all__ = [
     "Demographics",
     "EmbeddedService",
     "ExternalControls",
+    "FamilyGenerationSpec",
     "FinancialInstitutionProfile",
+    "GeneratedFamily",
+    "GeneratedFamilyPopulation",
     "HouseholdAgent",
     "HousingAssistance",
     "HousingStock",
@@ -71,6 +81,8 @@ __all__ = [
     "active_delayed_effects",
     "advance_year",
     "detect_issues",
+    "generate_family_agents",
+    "generate_family_population",
     "living_conditions_for",
     "simulate",
 ]

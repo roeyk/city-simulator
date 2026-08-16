@@ -37,6 +37,13 @@ from city_simulator.model import (
     active_delayed_effects,
     simulate,
 )
+from city_simulator.person_generator import (
+    FamilyGenerationSpec,
+    GeneratedFamily,
+    GeneratedFamilyPopulation,
+    generate_family_agents,
+    generate_family_population,
+)
 from city_simulator.scenario import ScenarioError, load_city, load_scenario
 from city_simulator.starter import STARTER_PRESETS, starter_city, write_starter_city
 from city_simulator.views import PopulationStructureView, View
@@ -54,7 +61,10 @@ __all__ = [
     "DelayedEffect",
     "Demographics",
     "EmbeddedService",
+    "FamilyGenerationSpec",
     "FinancialInstitutionProfile",
+    "GeneratedFamily",
+    "GeneratedFamilyPopulation",
     "HouseholdAgent",
     "HousingAssistance",
     "HousingStock",
@@ -74,6 +84,8 @@ __all__ = [
     "ZoningEnvelope",
     "active_delayed_effects",
     "advance_citizen_histories",
+    "generate_family_agents",
+    "generate_family_population",
     "generate_representative_citizens",
     "living_conditions_for",
     "load_city",
