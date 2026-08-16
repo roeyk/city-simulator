@@ -28,6 +28,7 @@ from city_simulator.state import (
     YearResult,
     ZoningEnvelope,
 )
+from city_simulator.views import PopulationStructureView, View
 
 __all__ = [
     "ANNUAL_TURN_STEPS",
@@ -47,7 +48,9 @@ __all__ = [
     "Neighborhood",
     "OperatingSchedule",
     "PlaceAsset",
+    "PopulationStructureView",
     "PressureLedger",
+    "View",
     "YearResult",
     "ZoningEnvelope",
     "active_delayed_effects",

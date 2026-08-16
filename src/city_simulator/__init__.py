@@ -30,6 +30,7 @@ from city_simulator.model import (
 )
 from city_simulator.scenario import ScenarioError, load_city, load_scenario
 from city_simulator.starter import STARTER_PRESETS, starter_city, write_starter_city
+from city_simulator.views import PopulationStructureView, View
 
 __all__ = [
     "ANNUAL_TURN_STEPS",
@@ -50,8 +51,10 @@ __all__ = [
     "Neighborhood",
     "OperatingSchedule",
     "PlaceAsset",
+    "PopulationStructureView",
     "PressureLedger",
     "ScenarioError",
+    "View",
     "YearResult",
     "ZoningEnvelope",
     "active_delayed_effects",
