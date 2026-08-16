@@ -1,6 +1,13 @@
 """Statistics-first city simulation package."""
 
-from city_simulator.agents import Agent, HouseholdAgent, OrganizationAgent, PersonAgent
+from city_simulator.agents import (
+    Agent,
+    HouseholdAgent,
+    LivingConditions,
+    OrganizationAgent,
+    PersonAgent,
+    living_conditions_for,
+)
 from city_simulator.citizens import (
     Citizen,
     advance_citizen_histories,
@@ -50,6 +57,7 @@ __all__ = [
     "HousingAssistance",
     "HousingStock",
     "Issue",
+    "LivingConditions",
     "ModelParameters",
     "Neighborhood",
     "OperatingSchedule",
@@ -65,6 +73,7 @@ __all__ = [
     "active_delayed_effects",
     "advance_citizen_histories",
     "generate_representative_citizens",
+    "living_conditions_for",
     "load_city",
     "load_scenario",
     "simulate",

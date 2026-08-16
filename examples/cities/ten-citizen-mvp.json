@@ -1,0 +1,539 @@
+{
+  "population": 10,
+  "demographics": {
+    "children": 3,
+    "working_age": 6,
+    "seniors": 1,
+    "low_income": 1,
+    "middle_income": 5,
+    "high_income": 4
+  },
+  "housing_units": 190,
+  "jobs": 18,
+  "budget": 50000000,
+  "infrastructure": 70,
+  "pollution": 22,
+  "satisfaction": 58,
+  "neighborhoods": {
+    "village_hills": {
+      "name": "Village Hills",
+      "area_square_miles": 0.35,
+      "population": 1,
+      "housing_units": 160,
+      "jobs": 4,
+      "housing_stock": {
+        "highrise_apartment_units": 120,
+        "senior_housing_units": 40
+      },
+      "land_use_mix": {
+        "residential": 0.65,
+        "civic": 0.2,
+        "commercial": 0.15
+      },
+      "place_assets": [
+        {
+          "name": "Assisted Living Mid-Rise",
+          "asset_type": "care_facility",
+          "capacity": 40,
+          "jobs": 4,
+          "services": [
+            {
+              "name": "Assisted Living Care",
+              "service_type": "senior_care",
+              "capacity": 40
+            }
+          ]
+        }
+      ]
+    },
+    "summer_crescent_boulevard": {
+      "name": "Summer Crescent Boulevard",
+      "area_square_miles": 0.45,
+      "population": 9,
+      "housing_units": 30,
+      "jobs": 14,
+      "housing_stock": {
+        "single_family_units": 30
+      },
+      "land_use_mix": {
+        "residential": 0.7,
+        "commercial": 0.25,
+        "civic": 0.05
+      }
+    }
+  },
+  "place_assets": [
+    {
+      "name": "Prosock School",
+      "asset_type": "school",
+      "capacity": 600,
+      "jobs": 25,
+      "services": [
+        {
+          "name": "K-12 Seats",
+          "service_type": "education",
+          "capacity": 600
+        }
+      ]
+    },
+    {
+      "name": "Prosock Clinic",
+      "asset_type": "clinic",
+      "capacity": 80,
+      "jobs": 12,
+      "services": [
+        {
+          "name": "Primary Care",
+          "service_type": "healthcare",
+          "capacity": 80
+        }
+      ]
+    },
+    {
+      "name": "Prosock City Hall",
+      "asset_type": "city_hall",
+      "jobs": 15,
+      "services": [
+        {
+          "name": "City Administration",
+          "service_type": "civic_administration",
+          "capacity": 500
+        }
+      ]
+    },
+    {
+      "name": "Prosock Homeless Shelter",
+      "asset_type": "shelter",
+      "capacity": 30,
+      "jobs": 6,
+      "services": [
+        {
+          "name": "Emergency Shelter Beds",
+          "service_type": "housing_assistance",
+          "capacity": 30
+        }
+      ]
+    },
+    {
+      "name": "Domestic Abuse Services Center",
+      "asset_type": "service_center",
+      "capacity": 25,
+      "jobs": 5,
+      "services": [
+        {
+          "name": "Domestic Abuse Support",
+          "service_type": "family_safety",
+          "capacity": 25
+        }
+      ]
+    }
+  ],
+  "pending_effects": [
+    {
+      "source": "government_contractor_corruption",
+      "target": "civic_trust",
+      "amount": -8,
+      "delay_turns": 0,
+      "duration_turns": 3,
+      "decay_rate": 0.25,
+      "tags": [
+        "corruption",
+        "contractors",
+        "government_sector"
+      ],
+      "explanation": "Current problem: government-sector corruption involving contractors."
+    }
+  ],
+  "people": [
+    {
+      "agent_id": "juan-hernandez",
+      "display_name": "Juan Hernandez",
+      "household_id": "hernandez",
+      "age": 37,
+      "income_band": "middle",
+      "employment_status": "business_owner",
+      "role": "landscaping business owner",
+      "health_status": "good",
+      "housing_status": "single-family house",
+      "debts": [
+        "mortgage 25% paid",
+        "commercial truck loan 30% paid"
+      ]
+    },
+    {
+      "agent_id": "louise-hernandez",
+      "display_name": "Louise Hernandez",
+      "household_id": "hernandez",
+      "age": 35,
+      "income_band": "low",
+      "employment_status": "employed",
+      "role": "receptionist",
+      "health_status": "good",
+      "housing_status": "single-family house",
+      "debts": [
+        "shared mortgage",
+        "shared commercial truck loan"
+      ],
+      "notes": [
+        "married to Juan Hernandez"
+      ]
+    },
+    {
+      "agent_id": "renee-hernandez",
+      "display_name": "Renee Hernandez",
+      "household_id": "hernandez",
+      "age": 5,
+      "income_band": "middle",
+      "employment_status": "student",
+      "role": "kindergarten student",
+      "health_status": "good",
+      "notes": [
+        "son of Juan and Louise Hernandez"
+      ]
+    },
+    {
+      "agent_id": "jose-hernandez",
+      "display_name": "Jose Hernandez",
+      "household_id": "hernandez",
+      "age": 9,
+      "income_band": "middle",
+      "employment_status": "student",
+      "role": "4th grade student",
+      "health_status": "good",
+      "notes": [
+        "son of Juan and Louise Hernandez"
+      ]
+    },
+    {
+      "agent_id": "dorothy-jones",
+      "display_name": "Dorothy Jones",
+      "household_id": "jones",
+      "age": 78,
+      "income_band": "middle",
+      "employment_status": "retired",
+      "role": "retired, social security and medicare",
+      "health_status": "chronic_conditions",
+      "health_conditions": [
+        "heart disease",
+        "autodegenerative disease",
+        "early dementia"
+      ],
+      "housing_status": "assisted living",
+      "assets": [
+        "sold house for 500000"
+      ]
+    },
+    {
+      "agent_id": "ron-harcourt",
+      "display_name": "Ron Harcourt",
+      "household_id": "harcourt",
+      "age": 57,
+      "income_band": "high",
+      "employment_status": "self_employed",
+      "role": "market day-trader",
+      "health_status": "chronic_condition",
+      "health_conditions": [
+        "moderate heart disease"
+      ],
+      "housing_status": "single-family house",
+      "debts": [
+        "mortgage 80% paid"
+      ]
+    },
+    {
+      "agent_id": "jane-harcourt",
+      "display_name": "Jane Harcourt",
+      "household_id": "harcourt",
+      "age": 57,
+      "income_band": "high",
+      "employment_status": "business_owner",
+      "role": "business recruiting services owner",
+      "health_status": "good",
+      "housing_status": "single-family house"
+    },
+    {
+      "agent_id": "morty-harcourt",
+      "display_name": "Morty Harcourt",
+      "household_id": "harcourt",
+      "age": 16,
+      "income_band": "high",
+      "employment_status": "student",
+      "role": "10th grade student",
+      "health_status": "good",
+      "notes": [
+        "son of Ron and Jane Harcourt"
+      ]
+    },
+    {
+      "agent_id": "john-korr",
+      "display_name": "John Korr",
+      "household_id": "korr",
+      "age": 22,
+      "income_band": "high",
+      "employment_status": "employed",
+      "role": "retail salesman",
+      "health_status": "good",
+      "housing_status": "apartment",
+      "debts": [
+        "car payments",
+        "college payments 20% paid"
+      ]
+    },
+    {
+      "agent_id": "yossi-katan",
+      "display_name": "Yossi Katan",
+      "household_id": "katan",
+      "age": 36,
+      "income_band": "middle",
+      "employment_status": "self_employed",
+      "role": "locksmith",
+      "health_status": "good",
+      "housing_status": "apartment",
+      "debts": [
+        "car payments 90% paid"
+      ]
+    }
+  ],
+  "households": [
+    {
+      "agent_id": "hernandez",
+      "member_ids": [
+        "juan-hernandez",
+        "louise-hernandez",
+        "renee-hernandez",
+        "jose-hernandez"
+      ],
+      "income_band": "middle",
+      "tenure": "owner",
+      "housing_status": "single-family house",
+      "debts": [
+        "mortgage 25% paid",
+        "commercial truck loan 30% paid"
+      ]
+    },
+    {
+      "agent_id": "jones",
+      "member_ids": [
+        "dorothy-jones"
+      ],
+      "income_band": "middle",
+      "tenure": "assisted_living",
+      "housing_status": "assisted living",
+      "assets": [
+        "sold house for 500000"
+      ]
+    },
+    {
+      "agent_id": "harcourt",
+      "member_ids": [
+        "ron-harcourt",
+        "jane-harcourt",
+        "morty-harcourt"
+      ],
+      "income_band": "high",
+      "tenure": "owner",
+      "housing_status": "single-family house",
+      "debts": [
+        "mortgage 80% paid"
+      ]
+    },
+    {
+      "agent_id": "korr",
+      "member_ids": [
+        "john-korr"
+      ],
+      "income_band": "high",
+      "tenure": "renter",
+      "housing_status": "apartment",
+      "debts": [
+        "car payments",
+        "college payments 20% paid"
+      ]
+    },
+    {
+      "agent_id": "katan",
+      "member_ids": [
+        "yossi-katan"
+      ],
+      "income_band": "middle",
+      "tenure": "renter",
+      "housing_status": "apartment",
+      "debts": [
+        "car payments 90% paid"
+      ]
+    }
+  ],
+  "organizations": [
+    {
+      "agent_id": "juan-landscaping",
+      "display_name": "Juan Hernandez Landscaping",
+      "organization_type": "business",
+      "sector": "landscaping",
+      "staff": 1
+    },
+    {
+      "agent_id": "jane-recruiting",
+      "display_name": "Harcourt Recruiting Services",
+      "organization_type": "business",
+      "sector": "professional_services",
+      "staff": 1
+    },
+    {
+      "agent_id": "korr-retail",
+      "display_name": "Local Retail Shop",
+      "organization_type": "business",
+      "sector": "retail",
+      "staff": 1
+    },
+    {
+      "agent_id": "katan-locksmith",
+      "display_name": "Katan Locksmith",
+      "organization_type": "business",
+      "sector": "locksmith",
+      "staff": 1
+    },
+    {
+      "agent_id": "assisted-living-home",
+      "display_name": "Assisted Living Home",
+      "organization_type": "care_facility",
+      "sector": "senior_care",
+      "staff": 1
+    },
+    {
+      "agent_id": "prosock-indian-restaurant",
+      "display_name": "Prosock Indian Restaurant",
+      "organization_type": "business",
+      "sector": "restaurant",
+      "staff": 2
+    },
+    {
+      "agent_id": "prosock-fast-food",
+      "display_name": "Prosock Fast Food Restaurant",
+      "organization_type": "business",
+      "sector": "restaurant",
+      "staff": 2
+    },
+    {
+      "agent_id": "prosock-chinese-restaurant",
+      "display_name": "Prosock Chinese Restaurant",
+      "organization_type": "business",
+      "sector": "restaurant",
+      "staff": 2
+    },
+    {
+      "agent_id": "prosock-sandwich-shop",
+      "display_name": "Prosock Sandwich Shop",
+      "organization_type": "business",
+      "sector": "restaurant",
+      "staff": 1
+    },
+    {
+      "agent_id": "prosock-dry-cleaning",
+      "display_name": "Prosock Dry Cleaning",
+      "organization_type": "business",
+      "sector": "personal_services",
+      "staff": 1
+    },
+    {
+      "agent_id": "prosock-liquor-store",
+      "display_name": "Prosock Liquor Store",
+      "organization_type": "business",
+      "sector": "retail",
+      "staff": 1
+    },
+    {
+      "agent_id": "prosock-car-wash",
+      "display_name": "Prosock Car Wash",
+      "organization_type": "business",
+      "sector": "auto_services",
+      "staff": 1
+    },
+    {
+      "agent_id": "prosock-car-insurance",
+      "display_name": "Prosock Car Insurance",
+      "organization_type": "business",
+      "sector": "insurance",
+      "staff": 1
+    },
+    {
+      "agent_id": "prosock-book-store",
+      "display_name": "Prosock Book Store",
+      "organization_type": "business",
+      "sector": "retail",
+      "staff": 1
+    },
+    {
+      "agent_id": "prosock-grocery-store",
+      "display_name": "Prosock Grocery Store",
+      "organization_type": "business",
+      "sector": "grocery",
+      "staff": 3
+    },
+    {
+      "agent_id": "prosock-asian-grocery",
+      "display_name": "Prosock Specialty Asian Grocery Store",
+      "organization_type": "business",
+      "sector": "grocery",
+      "staff": 1
+    },
+    {
+      "agent_id": "prosock-hardware-store",
+      "display_name": "Prosock Hardware Store",
+      "organization_type": "business",
+      "sector": "hardware",
+      "staff": 2
+    },
+    {
+      "agent_id": "prosock-garden-nursery",
+      "display_name": "Prosock Garden Nursery",
+      "organization_type": "business",
+      "sector": "garden_nursery",
+      "staff": 2
+    },
+    {
+      "agent_id": "prosock-clothing-store",
+      "display_name": "Prosock Clothing Store",
+      "organization_type": "business",
+      "sector": "retail",
+      "staff": 1
+    },
+    {
+      "agent_id": "prosock-university",
+      "display_name": "Prosock University",
+      "organization_type": "university",
+      "sector": "education",
+      "staff": 20
+    },
+    {
+      "agent_id": "prosock-nonprofit",
+      "display_name": "Prosock Community Nonprofit",
+      "organization_type": "nonprofit",
+      "sector": "community_services",
+      "staff": 4
+    },
+    {
+      "agent_id": "prosock-catholic-church",
+      "display_name": "Prosock Catholic Church",
+      "organization_type": "religious_institution",
+      "sector": "faith_community",
+      "staff": 2
+    },
+    {
+      "agent_id": "prosock-nondenominational-church",
+      "display_name": "Prosock Nondenominational Church",
+      "organization_type": "religious_institution",
+      "sector": "faith_community",
+      "staff": 2
+    },
+    {
+      "agent_id": "prosock-city-government",
+      "display_name": "Prosock City Government",
+      "organization_type": "government",
+      "sector": "municipal_government",
+      "staff": 15,
+      "notes": [
+        "current problem: corruption of government sector to contractors"
+      ]
+    }
+  ]
+}

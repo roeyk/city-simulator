@@ -344,7 +344,9 @@ def _people_from_sequence(
         item_label = f"{label}[{index}]"
         if not isinstance(value, dict):
             raise ScenarioError(f"{item_label} must be an object")
-        people.append(_dataclass_from_mapping(PersonAgent, value, item_label))
+        person_data = dict(value)
+        _tupleize(person_data, ("health_conditions", "debts", "assets", "notes"))
+        people.append(_dataclass_from_mapping(PersonAgent, person_data, item_label))
     return tuple(people)
 
 
@@ -358,7 +360,7 @@ def _households_from_sequence(
         if not isinstance(value, dict):
             raise ScenarioError(f"{item_label} must be an object")
         household_data = dict(value)
-        _tupleize(household_data, ("member_ids",))
+        _tupleize(household_data, ("member_ids", "debts", "assets", "notes"))
         households.append(_dataclass_from_mapping(HouseholdAgent, household_data, item_label))
     return tuple(households)
 
@@ -372,7 +374,11 @@ def _organizations_from_sequence(
         item_label = f"{label}[{index}]"
         if not isinstance(value, dict):
             raise ScenarioError(f"{item_label} must be an object")
-        organizations.append(_dataclass_from_mapping(OrganizationAgent, value, item_label))
+        organization_data = dict(value)
+        _tupleize(organization_data, ("notes",))
+        organizations.append(
+            _dataclass_from_mapping(OrganizationAgent, organization_data, item_label)
+        )
     return tuple(organizations)
 
 

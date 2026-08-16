@@ -1,6 +1,13 @@
 from __future__ import annotations
 
-from city_simulator.agents import Agent, HouseholdAgent, OrganizationAgent, PersonAgent
+from city_simulator.agents import (
+    Agent,
+    HouseholdAgent,
+    LivingConditions,
+    OrganizationAgent,
+    PersonAgent,
+    living_conditions_for,
+)
 from city_simulator.derived import active_delayed_effects
 from city_simulator.simulation import (
     ANNUAL_TURN_STEPS,
@@ -47,6 +54,7 @@ __all__ = [
     "HousingAssistance",
     "HousingStock",
     "Issue",
+    "LivingConditions",
     "ModelParameters",
     "Neighborhood",
     "OperatingSchedule",
@@ -61,5 +69,6 @@ __all__ = [
     "active_delayed_effects",
     "advance_year",
     "detect_issues",
+    "living_conditions_for",
     "simulate",
 ]

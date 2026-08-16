@@ -1,5 +1,6 @@
 import pytest
 
+from city_simulator import living_conditions_for
 from city_simulator.scenario import (
     ScenarioError,
     city_from_mapping,
@@ -15,6 +16,31 @@ def test_city_from_mapping_keeps_defaults_for_missing_fields():
     assert city.population == 50_000
     assert city.demographics.children == 9_000
     assert city.demographics.working_age == 62_000
+
+
+def test_ten_citizen_mvp_city_loads():
+    city = load_city("examples/cities/ten-citizen-mvp.json")
+
+    assert city.population == 10
+    assert len(city.people) == 10
+    assert len(city.households) == 5
+    assert len(city.organizations) >= 20
+    assert city.budget == 50_000_000
+    assert city.pollution == 22
+    assert city.neighborhoods["village_hills"].housing_units == 160
+    assert city.neighborhoods["summer_crescent_boulevard"].housing_units == 30
+    assert city.people[0].display_name == "Juan Hernandez"
+    assert "mortgage 25% paid" in city.households[0].debts
+    hernandez = next(household for household in city.households if household.agent_id == "hernandez")
+    renee = next(person for person in city.people if person.agent_id == "renee-hernandez")
+    assert renee.housing_status == ""
+    assert living_conditions_for(renee, hernandez).housing_status == "single-family house"
+    assert city.pending_effects[0].target == "civic_trust"
+    assert city.pending_effects[0].tags == (
+        "corruption",
+        "contractors",
+        "government_sector",
+    )
 
 
 def test_city_from_mapping_reads_sensitivity():
