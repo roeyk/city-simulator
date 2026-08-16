@@ -7,6 +7,7 @@ from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from statistics import mean
+from typing import TypedDict
 
 
 @dataclass(frozen=True)
@@ -31,6 +32,18 @@ class ModuleMetrics:
     instability: float
     internal_imports: tuple[str, ...]
     external_imports: tuple[str, ...]
+
+
+class ModuleSummary(TypedDict):
+    logical_lines: int
+    classes: int
+    functions: int
+    methods: int
+    average_complexity: float
+    max_complexity: int
+    cohesion: float
+    internal_imports: set[str]
+    external_imports: set[str]
 
 
 def analyze_paths(paths: Iterable[str | Path]) -> list[ModuleMetrics]:
@@ -175,7 +188,7 @@ def _module_name(path: Path) -> str:
     return ".".join(without_suffix.parts)
 
 
-def _analyze_module(path: Path, known_modules: set[str]) -> dict[str, object]:
+def _analyze_module(path: Path, known_modules: set[str]) -> ModuleSummary:
     source = path.read_text(encoding="utf-8")
     tree = ast.parse(source, filename=str(path))
     function_metrics = [_function_metrics(node) for node in ast.walk(tree) if _is_function(node)]
