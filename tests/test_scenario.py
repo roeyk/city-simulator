@@ -534,6 +534,32 @@ def test_save_city_round_trips_named_city(tmp_path, monkeypatch):
             "year": 2,
             "sensitivity": {"crime_unemployment": 1.25},
             "housing_assistance": {"shelter_beds": 12},
+            "people": [
+                {
+                    "agent_id": "person-1",
+                    "household_id": "household-1",
+                    "age": 35,
+                    "income_band": "middle",
+                    "weight": 20,
+                }
+            ],
+            "households": [
+                {
+                    "agent_id": "household-1",
+                    "member_ids": ["person-1"],
+                    "income_band": "middle",
+                    "tenure": "owner",
+                    "weight": 20,
+                }
+            ],
+            "organizations": [
+                {
+                    "agent_id": "org-1",
+                    "organization_type": "university",
+                    "sector": "education",
+                    "staff": 1200,
+                }
+            ],
             "pending_effects": [
                 {
                     "source": "summer_blackout",
@@ -592,6 +618,9 @@ def test_save_city_round_trips_named_city(tmp_path, monkeypatch):
     assert load_city("roundtrip").year == 2
     assert load_city("roundtrip").sensitivity.crime_unemployment == 1.25
     assert load_city("roundtrip").housing_assistance.shelter_beds == 12
+    assert load_city("roundtrip").people[0].weight == 20
+    assert load_city("roundtrip").households[0].member_ids == ("person-1",)
+    assert load_city("roundtrip").organizations[0].organization_type == "university"
     assert load_city("roundtrip").pending_effects[0].target == "infrastructure_backlog"
     assert load_city("roundtrip").pending_effects[0].tags == ("grid", "capital_repair")
     assert load_city("roundtrip").neighborhoods["central"].housing_stock.rowhouse_units == 22

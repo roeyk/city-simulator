@@ -72,6 +72,30 @@ def test_population_structure_view_can_roll_up_weighted_people():
     assert isclose(view.dependency_ratio, 1.0)
 
 
+def test_population_structure_views_converge_for_matching_state_and_people():
+    state = CityState(
+        population=100,
+        demographics=Demographics(
+            children=20,
+            working_age=50,
+            seniors=30,
+            low_income=20,
+            middle_income=50,
+            high_income=30,
+        ),
+    )
+    people = (
+        PersonAgent("child-1", "family-1", age=8, income_band="low", weight=20),
+        PersonAgent("worker-1", "family-1", age=36, income_band="middle", weight=50),
+        PersonAgent("senior-1", "family-2", age=72, income_band="high", weight=30),
+    )
+
+    aggregate_view = PopulationStructureView.derive(state)
+    agent_view = PopulationStructureView.derive_from_people(people)
+
+    assert aggregate_view.as_dict() == agent_view.as_dict()
+
+
 def test_agent_types_share_identity_and_weight():
     person = PersonAgent("person-1", household_id="household-1", age=34, income_band="middle")
     household = HouseholdAgent(

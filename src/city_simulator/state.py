@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from city_simulator.agents import HouseholdAgent, OrganizationAgent, PersonAgent
+
 
 @dataclass(frozen=True)
 class Demographics:
@@ -322,6 +324,9 @@ class CityState:
     civic_assets: dict[str, float] = field(default_factory=dict)
     neighborhoods: dict[str, Neighborhood] = field(default_factory=dict)
     place_assets: tuple[PlaceAsset, ...] = ()
+    people: tuple[PersonAgent, ...] = ()
+    households: tuple[HouseholdAgent, ...] = ()
+    organizations: tuple[OrganizationAgent, ...] = ()
     housing_stock: HousingStock = HousingStock()
     housing_assistance: HousingAssistance = HousingAssistance()
     housing_units: float = 43_000

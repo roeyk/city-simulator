@@ -15,10 +15,13 @@ from city_simulator.model import (
     EmbeddedService,
     ExternalControls,
     FinancialInstitutionProfile,
+    HouseholdAgent,
     HousingAssistance,
     HousingStock,
     Neighborhood,
     OperatingSchedule,
+    OrganizationAgent,
+    PersonAgent,
     PlaceAsset,
     ZoningEnvelope,
 )
@@ -77,6 +80,15 @@ def city_from_mapping(data: dict[str, Any]) -> CityState:
     place_assets_data = data.get("place_assets", ())
     if not isinstance(place_assets_data, list | tuple):
         raise ScenarioError("city place_assets must be an array")
+    people_data = data.get("people", ())
+    if not isinstance(people_data, list | tuple):
+        raise ScenarioError("city people must be an array")
+    households_data = data.get("households", ())
+    if not isinstance(households_data, list | tuple):
+        raise ScenarioError("city households must be an array")
+    organizations_data = data.get("organizations", ())
+    if not isinstance(organizations_data, list | tuple):
+        raise ScenarioError("city organizations must be an array")
     pending_effects_data = data.get("pending_effects", ())
     if not isinstance(pending_effects_data, list | tuple):
         raise ScenarioError("city pending_effects must be an array")
@@ -120,6 +132,9 @@ def city_from_mapping(data: dict[str, Any]) -> CityState:
             "housing_assistance",
             "neighborhoods",
             "place_assets",
+            "people",
+            "households",
+            "organizations",
             "pending_effects",
         }
     }
@@ -134,6 +149,12 @@ def city_from_mapping(data: dict[str, Any]) -> CityState:
             "housing_assistance": housing_assistance,
             "neighborhoods": neighborhoods,
             "place_assets": place_assets,
+            "people": _people_from_sequence(people_data, "city people"),
+            "households": _households_from_sequence(households_data, "city households"),
+            "organizations": _organizations_from_sequence(
+                organizations_data,
+                "city organizations",
+            ),
             "pending_effects": _delayed_effects_from_sequence(
                 pending_effects_data,
                 "city pending_effects",
@@ -312,6 +333,47 @@ def _financial_profile_from_mapping(
     profile_data = dict(data)
     _tupleize(profile_data, ("market_roles", "participant_roles", "asset_classes"))
     return _dataclass_from_mapping(FinancialInstitutionProfile, profile_data, label)
+
+
+def _people_from_sequence(
+    data: list[Any] | tuple[Any, ...],
+    label: str,
+) -> tuple[PersonAgent, ...]:
+    people: list[PersonAgent] = []
+    for index, value in enumerate(data):
+        item_label = f"{label}[{index}]"
+        if not isinstance(value, dict):
+            raise ScenarioError(f"{item_label} must be an object")
+        people.append(_dataclass_from_mapping(PersonAgent, value, item_label))
+    return tuple(people)
+
+
+def _households_from_sequence(
+    data: list[Any] | tuple[Any, ...],
+    label: str,
+) -> tuple[HouseholdAgent, ...]:
+    households: list[HouseholdAgent] = []
+    for index, value in enumerate(data):
+        item_label = f"{label}[{index}]"
+        if not isinstance(value, dict):
+            raise ScenarioError(f"{item_label} must be an object")
+        household_data = dict(value)
+        _tupleize(household_data, ("member_ids",))
+        households.append(_dataclass_from_mapping(HouseholdAgent, household_data, item_label))
+    return tuple(households)
+
+
+def _organizations_from_sequence(
+    data: list[Any] | tuple[Any, ...],
+    label: str,
+) -> tuple[OrganizationAgent, ...]:
+    organizations: list[OrganizationAgent] = []
+    for index, value in enumerate(data):
+        item_label = f"{label}[{index}]"
+        if not isinstance(value, dict):
+            raise ScenarioError(f"{item_label} must be an object")
+        organizations.append(_dataclass_from_mapping(OrganizationAgent, value, item_label))
+    return tuple(organizations)
 
 
 def _delayed_effects_from_sequence(
