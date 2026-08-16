@@ -495,6 +495,18 @@ def _step_satisfaction_migration_demographics(context: AnnualTurnContext) -> Non
     context.growth_rate = context.population_delta / max(context.state.population, 1.0)
 
 
+def _step_labor_market(context: AnnualTurnContext) -> None:
+    context.labor_market = _labor_market(
+        population=_required(context.population, "population"),
+        demographics=_required(context.demographics, "demographics"),
+        jobs=_required(context.jobs, "jobs"),
+        infrastructure=_required(context.infrastructure, "infrastructure"),
+        education_profile=context.state.population_profile.get("education_percent", {}),
+        parameters=context.parameters,
+        sensitivity=context.state.sensitivity,
+    )
+
+
 def _step_commit_state(context: AnnualTurnContext) -> None:
     pressure_ledger = _required(context.pressure_ledger, "pressure_ledger")
     context.next_state = CityState(
@@ -530,6 +542,7 @@ def _step_commit_state(context: AnnualTurnContext) -> None:
             parameters=context.parameters,
             sensitivity=context.state.sensitivity,
             pressure_ledger=pressure_ledger,
+            labor_market=_required(context.labor_market, "labor_market"),
         ),
         sensitivity=context.state.sensitivity,
         pending_effects=_advance_delayed_effects(context.state.pending_effects)
@@ -580,6 +593,12 @@ ANNUAL_TURN_STEPS = (
         produces=("satisfaction", "population_delta", "population", "demographics", "growth_rate"),
     ),
     TurnStep(
+        "labor_market",
+        _step_labor_market,
+        requires=("population", "demographics", "jobs", "infrastructure"),
+        produces=("labor_market",),
+    ),
+    TurnStep(
         "commit_state",
         _step_commit_state,
         requires=(
@@ -596,6 +615,7 @@ ANNUAL_TURN_STEPS = (
             "population",
             "demographics",
             "growth_rate",
+            "labor_market",
         ),
         produces=("next_state",),
     ),

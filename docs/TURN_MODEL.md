@@ -1,6 +1,6 @@
 # Turn Model
 
-Last updated: 2026-08-15
+Last updated: 2026-08-16
 
 City Simulator advances in yearly turns. A turn should be understandable as a
 sequence of civic changes, not a black-box formula.
@@ -55,7 +55,9 @@ large function.
    Residents fill the city jobs they can realistically access, while mismatch
    can leave both unemployed residents and unfilled jobs. The turn also derives
    job vacancies, commuters into the city, commuters out of the city, and the
-   unemployment rate.
+   unemployment rate. In the current aggregate implementation, this named step
+   runs after migration and demographics so it uses the same post-turn
+   population and cohort totals that are committed into the next state.
 
 5. Infrastructure and environment
 
@@ -115,6 +117,19 @@ weekends, nighttime operations, school terms, event seasons, or emergency
 periods. These internal periods are not player-visible turns yet; they are a
 way to preserve timing and seasonality while keeping annual scenario comparison
 simple.
+
+Turn order is part of the model, not an implementation accident. Policies and
+events should enter the annual turn through ordered steps that produce named
+intermediate signals. Later steps consume those signals, which means changing
+the order can legitimately change downstream outcomes. That behavior should be
+visible in `ANNUAL_TURN_STEPS`, tested through step dependencies, and explained
+in reports when it drives a major result.
+
+Events should avoid directly mutating final headline metrics when an
+intermediate channel can explain the path. For example, a heat wave should
+produce cooling demand, grid load, grid shortfall, healthcare surge, business
+disruption, or civic trust risk before later phases derive satisfaction,
+sentiment, active issues, or delayed effects.
 
 Seasonal climate should be modeled this way. For example, a severe summer heat
 profile can increase air-conditioning demand, stress the electric grid, create
@@ -223,8 +238,13 @@ pattern while preserving the annual turn and deterministic CLI behavior.
 
 - Keep turns deterministic by default.
 - Keep phase effects traceable to policy or outside pressure.
+- Treat turn order as an explicit causal contract. A step should consume only
+  prior step outputs, current canonical state, policy inputs, external controls,
+  model parameters, or declared delayed effects.
 - Prefer adding named intermediate values over hiding behavior in one large
   expression.
+- Do not use events as direct shortcuts to final metrics when a causal path can
+  be represented through intermediate signals and later turn steps.
 - Preserve feedback loops explicitly. When one layer can affect an earlier
   capacity or a later layer through a knock-on effect, pass a named feedback
   signal through bounded internal passes instead of assuming a single yearly

@@ -36,6 +36,7 @@ class AnnualTurnContext:
     population: float | None = None
     demographics: Demographics | None = None
     growth_rate: float | None = None
+    labor_market: dict[str, float] | None = None
     next_state: CityState | None = None
     active_issues: list[Issue] = field(default_factory=list)
 

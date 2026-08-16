@@ -31,10 +31,11 @@ def _city_metrics(
     parameters: ModelParameters,
     sensitivity: CitySensitivity,
     pressure_ledger: PressureLedger | None = None,
+    labor_market: dict[str, float] | None = None,
 ) -> CityMetrics:
     ledger = pressure_ledger or PressureLedger()
     service_coverage = _service_coverage(state)
-    labor = _labor_market(
+    labor = labor_market or _labor_market(
         population=population,
         demographics=demographics,
         jobs=jobs,
@@ -257,4 +258,3 @@ def _sentiment_signals(
 def _public_sentiment(signals: dict[str, float], parameters: ModelParameters) -> float:
     weights = parameters.public_sentiment_weights
     return sum(signals[key] * weight for key, weight in weights.items())
-

@@ -36,6 +36,7 @@ def test_annual_turn_steps_are_named_in_dependency_order():
         "infrastructure_environment",
         "seasonal_pressures",
         "satisfaction_migration_demographics",
+        "labor_market",
         "commit_state",
         "detect_issues",
     ]
@@ -45,6 +46,7 @@ def test_annual_turn_steps_are_named_in_dependency_order():
         produced.update(step.produces)
 
     assert "next_state" in produced
+    assert "labor_market" in produced
     assert "active_issues" in produced
 
 
