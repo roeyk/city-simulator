@@ -47,6 +47,27 @@ def test_generate_family_agents_is_deterministic_by_heritage_and_index():
     assert first.people[0].display_name == "Ari Levine"
 
 
+def test_adopted_child_keeps_birth_identity_but_uses_raised_culture_name():
+    family = generate_family_agents(
+        "anglo",
+        birth_heritages=("hispanic", "jewish"),
+        household_index=0,
+        adults=2,
+        children=1,
+    )
+
+    child = family.people[2]
+
+    assert child.display_name == "Morty Jones"
+    assert child.identity.cultures == ("anglo",)
+    assert child.adoption.is_adopted
+    assert child.adoption.birth_parent_ethnicities == ("hispanic", "jewish")
+    assert child.adoption.birth_parent_cultures == ("hispanic", "jewish")
+    assert child.adoption.adoptive_parent_ethnicities == ("anglo",)
+    assert child.adoption.raised_cultures == ("anglo",)
+    assert child.parent_ids == ("dorothy-jones-1", "ron-jones-2")
+
+
 def test_generate_family_agents_marks_retail_parent_under_housing_strain():
     family = generate_family_agents(
         "anglo",
@@ -184,6 +205,12 @@ def test_generate_family_agents_creates_organizations_for_business_owners():
     assert len(family.organizations) == 1
     assert family.organizations[0].organization_type == "business"
     assert family.organizations[0].sector == "landscaping"
+    assert family.organizations[0].owner_ids == ("juan-hernandez-1",)
+    assert family.organizations[0].customer_types == (
+        "residents",
+        "businesses",
+        "city_contracts",
+    )
     assert "serves businesses" in family.organizations[0].notes
 
 

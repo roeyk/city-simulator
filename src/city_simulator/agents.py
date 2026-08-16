@@ -10,6 +10,58 @@ class Agent:
 
 
 @dataclass(frozen=True)
+class CulturalIdentity:
+    ethnicities: tuple[str, ...] = ()
+    cultures: tuple[str, ...] = ()
+    languages: tuple[str, ...] = ()
+    religion: str = ""
+    religiosity: str = ""
+
+
+@dataclass(frozen=True)
+class AdoptionIdentity:
+    is_adopted: bool = False
+    birth_parent_ethnicities: tuple[str, ...] = ()
+    birth_parent_cultures: tuple[str, ...] = ()
+    adoptive_parent_ethnicities: tuple[str, ...] = ()
+    adoptive_parent_cultures: tuple[str, ...] = ()
+    raised_cultures: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class EducationCompletion:
+    institution_id: str
+    graduation_year: int
+    credential: str = ""
+    discipline: str = ""
+    major: str = ""
+    skills: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class EducationHistory:
+    daycare_ids: tuple[str, ...] = ()
+    grade_school_ids: tuple[str, ...] = ()
+    high_school_ids: tuple[str, ...] = ()
+    college_ids: tuple[str, ...] = ()
+    trade_school_ids: tuple[str, ...] = ()
+    masters_university_ids: tuple[str, ...] = ()
+    phd_university_ids: tuple[str, ...] = ()
+    graduations: tuple[EducationCompletion, ...] = ()
+
+
+@dataclass(frozen=True)
+class EmploymentRecord:
+    workplace_id: str
+    role: str
+    start_year: int
+    end_year: int | None = None
+    employment_status: str = "employed"
+    sector: str = ""
+    skills_used: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class PersonAgent(Agent):
     household_id: str
     age: int
@@ -20,6 +72,13 @@ class PersonAgent(Agent):
     display_name: str = ""
     role: str = ""
     housing_status: str = ""
+    parent_ids: tuple[str, ...] = ()
+    identity: CulturalIdentity = field(default_factory=CulturalIdentity)
+    adoption: AdoptionIdentity = field(default_factory=AdoptionIdentity)
+    workplace_id: str = ""
+    current_school_id: str = ""
+    education_history: EducationHistory = field(default_factory=EducationHistory)
+    employment_history: tuple[EmploymentRecord, ...] = ()
     health_conditions: tuple[str, ...] = ()
     debts: tuple[str, ...] = ()
     assets: tuple[str, ...] = ()
@@ -77,4 +136,7 @@ class OrganizationAgent(Agent):
     staff: float = 0.0
     operating_budget: float = 0.0
     display_name: str = ""
+    owner_ids: tuple[str, ...] = ()
+    founded_year: int | None = None
+    customer_types: tuple[str, ...] = ()
     notes: tuple[str, ...] = ()

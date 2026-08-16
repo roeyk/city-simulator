@@ -1,7 +1,12 @@
 """Statistics-first city simulation package."""
 
 from city_simulator.agents import (
+    AdoptionIdentity,
     Agent,
+    CulturalIdentity,
+    EducationCompletion,
+    EducationHistory,
+    EmploymentRecord,
     HouseholdAgent,
     LivingConditions,
     OrganizationAgent,
@@ -58,6 +63,7 @@ from city_simulator.work_catalog import (
 __all__ = [
     "ANNUAL_TURN_STEPS",
     "STARTER_PRESETS",
+    "AdoptionIdentity",
     "Agent",
     "BusinessType",
     "Citizen",
@@ -66,9 +72,13 @@ __all__ = [
     "CityRevenueSources",
     "CitySensitivity",
     "CityState",
+    "CulturalIdentity",
     "DelayedEffect",
     "Demographics",
+    "EducationCompletion",
+    "EducationHistory",
     "EmbeddedService",
+    "EmploymentRecord",
     "FamilyGenerationSpec",
     "FinancialInstitutionProfile",
     "GeneratedFamily",

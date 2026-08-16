@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from city_simulator.agents import HouseholdAgent, OrganizationAgent, PersonAgent
+from city_simulator.agents import (
+    AdoptionIdentity,
+    CulturalIdentity,
+    HouseholdAgent,
+    OrganizationAgent,
+    PersonAgent,
+)
 from city_simulator.work_catalog import JobTemplate, eligible_job_template_for
 
 
@@ -19,6 +25,7 @@ class GeneratedFamily:
 @dataclass(frozen=True)
 class FamilyGenerationSpec:
     heritage: str
+    birth_heritages: tuple[str, ...] = ()
     household_index: int = 0
     adults: int = 2
     children: int = 0
@@ -67,6 +74,7 @@ def generate_family_population(
     families = tuple(
         generate_family_agents(
             spec.heritage,
+            birth_heritages=spec.birth_heritages,
             household_index=spec.household_index,
             adults=spec.adults,
             children=spec.children,
@@ -95,6 +103,7 @@ def generate_family_population(
 
 def generate_family_agents(
     heritage: str,
+    birth_heritages: tuple[str, ...] = (),
     household_index: int = 0,
     adults: int = 2,
     children: int = 0,
@@ -117,6 +126,7 @@ def generate_family_agents(
         raise ValueError("weight must be positive")
     _validate_housing_cost_band(housing_cost_band)
     names = _heritage_names(heritage)
+    cultural_identity = _cultural_identity(heritage)
     family_name = _pick(names["family"], household_index)
     household_id = _agent_id(family_name)
     ages = _adult_ages(household_index, adults, adult_ages)
@@ -144,6 +154,7 @@ def generate_family_agents(
         adult_roles,
         ages,
         jobs,
+        cultural_identity,
     ) + _child_agents(
         names,
         family_name,
@@ -154,6 +165,8 @@ def generate_family_agents(
         income_band,
         neighborhood,
         weight,
+        cultural_identity,
+        birth_heritages,
     )
     return GeneratedFamily(
         household=HouseholdAgent(
@@ -165,7 +178,7 @@ def generate_family_agents(
             notes=_household_notes(support_need, support_capacity, housing_cost_band),
         ),
         people=people,
-        organizations=_business_organizations(family_name, household_index, jobs),
+        organizations=_business_organizations(family_name, household_index, jobs, people),
         support_need=support_need,
         support_capacity=support_capacity,
         support_gap=support_gap,
@@ -184,6 +197,7 @@ def _adult_agents(
     adult_roles: tuple[str, ...],
     adult_ages: tuple[int, ...],
     adult_jobs: tuple[JobTemplate, ...],
+    identity: CulturalIdentity,
 ) -> tuple[PersonAgent, ...]:
     people: list[PersonAgent] = []
     for index in range(count):
@@ -199,6 +213,7 @@ def _adult_agents(
                 employment_status=job.employment_status if job else "employed",
                 role=job.role if job else _adult_role(adult_roles, index),
                 neighborhood=neighborhood,
+                identity=identity,
                 weight=weight,
             )
         )
@@ -215,6 +230,8 @@ def _child_agents(
     income_band: str,
     neighborhood: str | None,
     weight: float,
+    raised_identity: CulturalIdentity,
+    birth_heritages: tuple[str, ...],
 ) -> tuple[PersonAgent, ...]:
     people: list[PersonAgent] = []
     for index in range(count):
@@ -228,6 +245,16 @@ def _child_agents(
                 income_band=income_band,
                 employment_status="student",
                 neighborhood=neighborhood,
+                parent_ids=tuple(
+                    _agent_id(
+                        _pick(names["adult"], household_index + parent_index),
+                        family_name,
+                        str(parent_index + 1),
+                    )
+                    for parent_index in range(adult_count)
+                ),
+                identity=raised_identity,
+                adoption=_adoption_identity(raised_identity, birth_heritages),
                 weight=weight,
             )
         )
@@ -240,6 +267,48 @@ def _heritage_names(heritage: str) -> dict[str, tuple[str, ...]]:
         choices = ", ".join(sorted(HERITAGE_NAMES))
         raise ValueError(f"unknown heritage {heritage!r}; choose one of: {choices}")
     return HERITAGE_NAMES[key]
+
+
+def _cultural_identity(heritage: str) -> CulturalIdentity:
+    key = heritage.lower()
+    return CulturalIdentity(
+        ethnicities=(key,),
+        cultures=(key,),
+        languages=_heritage_languages(key),
+    )
+
+
+def _heritage_languages(heritage: str) -> tuple[str, ...]:
+    match heritage:
+        case "hispanic":
+            return ("english", "spanish")
+        case "jewish":
+            return ("english", "hebrew")
+        case _:
+            return ("english",)
+
+
+def _adoption_identity(
+    raised_identity: CulturalIdentity,
+    birth_heritages: tuple[str, ...],
+) -> AdoptionIdentity:
+    if not birth_heritages:
+        return AdoptionIdentity()
+    birth_identities = tuple(_cultural_identity(heritage) for heritage in birth_heritages)
+    return AdoptionIdentity(
+        is_adopted=True,
+        birth_parent_ethnicities=tuple(
+            ethnicity
+            for identity in birth_identities
+            for ethnicity in identity.ethnicities
+        ),
+        birth_parent_cultures=tuple(
+            culture for identity in birth_identities for culture in identity.cultures
+        ),
+        adoptive_parent_ethnicities=raised_identity.ethnicities,
+        adoptive_parent_cultures=raised_identity.cultures,
+        raised_cultures=raised_identity.cultures,
+    )
 
 
 def _pick(values: tuple[str, ...], index: int) -> str:
@@ -388,6 +457,7 @@ def _business_organizations(
     family_name: str,
     household_index: int,
     adult_jobs: tuple[JobTemplate, ...],
+    people: tuple[PersonAgent, ...],
 ) -> tuple[OrganizationAgent, ...]:
     organizations: list[OrganizationAgent] = []
     for index, job in enumerate(adult_jobs):
@@ -399,6 +469,8 @@ def _business_organizations(
                 organization_type=job.organization_type or "business",
                 sector=job.sector,
                 display_name=f"{family_name} {job.sector.replace('_', ' ')}",
+                owner_ids=(people[index].agent_id,),
+                customer_types=job.serves,
                 notes=tuple(f"serves {customer}" for customer in job.serves),
             )
         )

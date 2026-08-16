@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 from city_simulator.agents import (
+    AdoptionIdentity,
     Agent,
+    CulturalIdentity,
+    EducationCompletion,
+    EducationHistory,
+    EmploymentRecord,
     HouseholdAgent,
     LivingConditions,
     OrganizationAgent,
@@ -55,6 +60,7 @@ from city_simulator.work_catalog import (
 
 __all__ = [
     "ANNUAL_TURN_STEPS",
+    "AdoptionIdentity",
     "Agent",
     "BusinessType",
     "CityMetrics",
@@ -62,9 +68,13 @@ __all__ = [
     "CityRevenueSources",
     "CitySensitivity",
     "CityState",
+    "CulturalIdentity",
     "DelayedEffect",
     "Demographics",
+    "EducationCompletion",
+    "EducationHistory",
     "EmbeddedService",
+    "EmploymentRecord",
     "ExternalControls",
     "FamilyGenerationSpec",
     "FinancialInstitutionProfile",

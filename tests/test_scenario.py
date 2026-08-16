@@ -584,6 +584,82 @@ def test_save_city_round_trips_named_city(tmp_path, monkeypatch):
                     "age": 35,
                     "income_band": "middle",
                     "weight": 20,
+                    "parent_ids": ["birth-parent-1", "birth-parent-2"],
+                    "identity": {
+                        "ethnicities": ["hispanic", "jewish"],
+                        "cultures": ["anglo"],
+                        "languages": ["english", "spanish"],
+                        "religion": "jewish",
+                        "religiosity": "medium",
+                    },
+                    "adoption": {
+                        "is_adopted": True,
+                        "birth_parent_ethnicities": ["hispanic", "jewish"],
+                        "birth_parent_cultures": ["hispanic", "jewish"],
+                        "adoptive_parent_ethnicities": ["anglo"],
+                        "adoptive_parent_cultures": ["anglo"],
+                        "raised_cultures": ["anglo"],
+                    },
+                    "workplace_id": "plumbing-business-1",
+                    "current_school_id": "college-1",
+                    "education_history": {
+                        "daycare_ids": ["daycare-1"],
+                        "grade_school_ids": ["grade-school-1"],
+                        "high_school_ids": ["high-school-1"],
+                        "college_ids": ["college-1"],
+                        "trade_school_ids": ["trade-school-1"],
+                        "masters_university_ids": ["masters-1"],
+                        "phd_university_ids": ["phd-1"],
+                        "graduations": [
+                            {
+                                "institution_id": "high-school-1",
+                                "graduation_year": 2007,
+                                "credential": "diploma",
+                                "discipline": "general",
+                                "major": "general studies",
+                                "skills": ["writing", "algebra"],
+                            },
+                            {
+                                "institution_id": "trade-school-1",
+                                "graduation_year": 2009,
+                                "credential": "certificate",
+                                "discipline": "skilled trades",
+                                "major": "plumbing",
+                                "skills": ["pipefitting", "water systems"],
+                            },
+                            {
+                                "institution_id": "masters-1",
+                                "graduation_year": 2018,
+                                "credential": "MBA",
+                                "discipline": "business",
+                                "major": "business administration",
+                                "skills": ["accounting", "operations management"],
+                            }
+                        ],
+                    },
+                    "employment_history": [
+                        {
+                            "workplace_id": "plumbing-shop-1",
+                            "role": "plumber",
+                            "start_year": 2009,
+                            "end_year": 2016,
+                            "employment_status": "employed",
+                            "sector": "plumbing_services",
+                            "skills_used": ["pipefitting", "water systems"],
+                        },
+                        {
+                            "workplace_id": "plumbing-business-1",
+                            "role": "plumbing business owner",
+                            "start_year": 2019,
+                            "employment_status": "business_owner",
+                            "sector": "plumbing_services",
+                            "skills_used": [
+                                "plumbing",
+                                "accounting",
+                                "operations management",
+                            ],
+                        },
+                    ],
                 }
             ],
             "households": [
@@ -601,6 +677,15 @@ def test_save_city_round_trips_named_city(tmp_path, monkeypatch):
                     "organization_type": "university",
                     "sector": "education",
                     "staff": 1200,
+                },
+                {
+                    "agent_id": "plumbing-business-1",
+                    "organization_type": "business",
+                    "sector": "plumbing_services",
+                    "display_name": "Jose Plumbing Services",
+                    "owner_ids": ["person-1"],
+                    "founded_year": 2019,
+                    "customer_types": ["residents", "businesses"],
                 }
             ],
             "pending_effects": [
@@ -662,8 +747,51 @@ def test_save_city_round_trips_named_city(tmp_path, monkeypatch):
     assert load_city("roundtrip").sensitivity.crime_unemployment == 1.25
     assert load_city("roundtrip").housing_assistance.shelter_beds == 12
     assert load_city("roundtrip").people[0].weight == 20
+    assert load_city("roundtrip").people[0].parent_ids == (
+        "birth-parent-1",
+        "birth-parent-2",
+    )
+    assert load_city("roundtrip").people[0].identity.ethnicities == ("hispanic", "jewish")
+    assert load_city("roundtrip").people[0].identity.cultures == ("anglo",)
+    assert load_city("roundtrip").people[0].adoption.is_adopted
+    assert load_city("roundtrip").people[0].adoption.raised_cultures == ("anglo",)
+    assert load_city("roundtrip").people[0].workplace_id == "plumbing-business-1"
+    assert load_city("roundtrip").people[0].current_school_id == "college-1"
+    assert load_city("roundtrip").people[0].education_history.daycare_ids == ("daycare-1",)
+    assert (
+        load_city("roundtrip").people[0].education_history.graduations[0].institution_id
+        == "high-school-1"
+    )
+    assert (
+        load_city("roundtrip").people[0].education_history.graduations[0].graduation_year
+        == 2007
+    )
+    assert load_city("roundtrip").people[0].education_history.graduations[0].skills == (
+        "writing",
+        "algebra",
+    )
+    assert (
+        load_city("roundtrip").people[0].education_history.graduations[1].major
+        == "plumbing"
+    )
+    assert (
+        load_city("roundtrip").people[0].education_history.graduations[2].credential
+        == "MBA"
+    )
+    assert load_city("roundtrip").people[0].employment_history[0].role == "plumber"
+    assert load_city("roundtrip").people[0].employment_history[0].end_year == 2016
+    assert (
+        load_city("roundtrip").people[0].employment_history[1].employment_status
+        == "business_owner"
+    )
     assert load_city("roundtrip").households[0].member_ids == ("person-1",)
     assert load_city("roundtrip").organizations[0].organization_type == "university"
+    assert load_city("roundtrip").organizations[1].owner_ids == ("person-1",)
+    assert load_city("roundtrip").organizations[1].founded_year == 2019
+    assert load_city("roundtrip").organizations[1].customer_types == (
+        "residents",
+        "businesses",
+    )
     assert load_city("roundtrip").pending_effects[0].target == "infrastructure_backlog"
     assert load_city("roundtrip").pending_effects[0].tags == ("grid", "capital_repair")
     assert load_city("roundtrip").neighborhoods["central"].housing_stock.rowhouse_units == 22

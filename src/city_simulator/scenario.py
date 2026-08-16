@@ -6,14 +6,19 @@ from pathlib import Path
 from typing import Any
 
 from city_simulator.model import (
+    AdoptionIdentity,
     CityMetrics,
     CityPolicy,
     CityRevenueSources,
     CitySensitivity,
     CityState,
+    CulturalIdentity,
     DelayedEffect,
     Demographics,
+    EducationCompletion,
+    EducationHistory,
     EmbeddedService,
+    EmploymentRecord,
     ExternalControls,
     FinancialInstitutionProfile,
     HouseholdAgent,
@@ -355,9 +360,116 @@ def _people_from_sequence(
         if not isinstance(value, dict):
             raise ScenarioError(f"{item_label} must be an object")
         person_data = dict(value)
-        _tupleize(person_data, ("health_conditions", "debts", "assets", "notes"))
+        _tupleize(
+            person_data,
+            ("parent_ids", "health_conditions", "debts", "assets", "notes"),
+        )
+        person_data["identity"] = _cultural_identity_from_mapping(
+            person_data.get("identity"),
+            f"{item_label}.identity",
+        )
+        person_data["adoption"] = _adoption_identity_from_mapping(
+            person_data.get("adoption"),
+            f"{item_label}.adoption",
+        )
+        person_data["education_history"] = _education_history_from_mapping(
+            person_data.get("education_history"),
+            f"{item_label}.education_history",
+        )
+        person_data["employment_history"] = _employment_history_from_sequence(
+            person_data.get("employment_history", ()),
+            f"{item_label}.employment_history",
+        )
         people.append(_dataclass_from_mapping(PersonAgent, person_data, item_label))
     return tuple(people)
+
+
+def _cultural_identity_from_mapping(
+    data: dict[str, Any] | None,
+    label: str,
+) -> CulturalIdentity:
+    if data is None:
+        return CulturalIdentity()
+    identity_data = dict(data)
+    _tupleize(identity_data, ("ethnicities", "cultures", "languages"))
+    return _dataclass_from_mapping(CulturalIdentity, identity_data, label)
+
+
+def _adoption_identity_from_mapping(
+    data: dict[str, Any] | None,
+    label: str,
+) -> AdoptionIdentity:
+    if data is None:
+        return AdoptionIdentity()
+    adoption_data = dict(data)
+    _tupleize(
+        adoption_data,
+        (
+            "birth_parent_ethnicities",
+            "birth_parent_cultures",
+            "adoptive_parent_ethnicities",
+            "adoptive_parent_cultures",
+            "raised_cultures",
+        ),
+    )
+    return _dataclass_from_mapping(AdoptionIdentity, adoption_data, label)
+
+
+def _education_history_from_mapping(
+    data: dict[str, Any] | None,
+    label: str,
+) -> EducationHistory:
+    if data is None:
+        return EducationHistory()
+    history_data = dict(data)
+    _tupleize(
+        history_data,
+        (
+            "daycare_ids",
+            "grade_school_ids",
+            "high_school_ids",
+            "college_ids",
+            "trade_school_ids",
+            "masters_university_ids",
+            "phd_university_ids",
+        ),
+    )
+    graduations_data = history_data.get("graduations", ())
+    if not isinstance(graduations_data, list | tuple):
+        raise ScenarioError(f"{label}.graduations must be an array")
+    history_data["graduations"] = tuple(
+        _education_completion_from_mapping(value, f"{label}.graduations[{index}]")
+        for index, value in enumerate(graduations_data)
+    )
+    return _dataclass_from_mapping(EducationHistory, history_data, label)
+
+
+def _education_completion_from_mapping(
+    data: Any,
+    label: str,
+) -> EducationCompletion:
+    if not isinstance(data, dict):
+        raise ScenarioError(f"{label} must be an object")
+    completion_data = dict(data)
+    _tupleize(completion_data, ("skills",))
+    return _dataclass_from_mapping(EducationCompletion, completion_data, label)
+
+
+def _employment_history_from_sequence(
+    data: Any,
+    label: str,
+) -> tuple[EmploymentRecord, ...]:
+    if not isinstance(data, list | tuple):
+        raise ScenarioError(f"{label} must be an array")
+    records: list[EmploymentRecord] = []
+    for index, value in enumerate(data):
+        item_label = f"{label}[{index}]"
+        if not isinstance(value, dict):
+            raise ScenarioError(f"{item_label} must be an object")
+        record_data = dict(value)
+        _tupleize(record_data, ("skills_used",))
+        records.append(_dataclass_from_mapping(EmploymentRecord, record_data, item_label))
+    return tuple(records)
 
 
 def _households_from_sequence(
@@ -385,7 +497,7 @@ def _organizations_from_sequence(
         if not isinstance(value, dict):
             raise ScenarioError(f"{item_label} must be an object")
         organization_data = dict(value)
-        _tupleize(organization_data, ("notes",))
+        _tupleize(organization_data, ("owner_ids", "customer_types", "notes"))
         organizations.append(
             _dataclass_from_mapping(OrganizationAgent, organization_data, item_label)
         )

@@ -138,6 +138,17 @@ PRIVATE_SERVICE_JOBS: tuple[JobTemplate, ...] = (
         organization_type="business",
     ),
     JobTemplate(
+        role="plumber",
+        employment_status="employed",
+        income_band="middle",
+        employer_type="private_business",
+        sector="plumbing_services",
+        serves=("residents", "businesses"),
+        organization_type="business",
+        required_education="trade",
+        min_experience_years=1,
+    ),
+    JobTemplate(
         role="medical assistant",
         employment_status="employed",
         income_band="middle",
@@ -170,6 +181,12 @@ OWNER_OPERATED_BUSINESSES: tuple[BusinessType, ...] = (
         display_name="locksmith business",
         customer_types=("residents", "businesses"),
         typical_owner_role="locksmith",
+    ),
+    BusinessType(
+        sector="plumbing_services",
+        display_name="plumbing services business",
+        customer_types=("residents", "businesses"),
+        typical_owner_role="plumbing business owner",
     ),
     BusinessType(
         sector="professional_services",
