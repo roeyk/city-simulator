@@ -6,6 +6,7 @@ from city_simulator.citizens import (
     generate_representative_citizens,
 )
 from city_simulator.model import (
+    ANNUAL_TURN_STEPS,
     CityMetrics,
     CityPolicy,
     CitySensitivity,
@@ -30,6 +31,7 @@ from city_simulator.scenario import ScenarioError, load_city, load_scenario
 from city_simulator.starter import STARTER_PRESETS, starter_city, write_starter_city
 
 __all__ = [
+    "ANNUAL_TURN_STEPS",
     "STARTER_PRESETS",
     "Citizen",
     "CityMetrics",

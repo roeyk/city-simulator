@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TypeVar
+
 from city_simulator.derived import _clamp
 from city_simulator.metrics import _city_metrics, _labor_market
 from city_simulator.pressures import (
@@ -18,6 +20,9 @@ from city_simulator.state import (
     PressureLedger,
     YearResult,
 )
+from city_simulator.turn_steps import AnnualTurnContext, TurnStep, run_turn_steps
+
+T = TypeVar("T")
 
 
 def simulate(
@@ -47,141 +52,29 @@ def advance_year(
     external: ExternalControls | None = None,
     parameters: ModelParameters | None = None,
 ) -> YearResult:
-    _validate_policy(policy)
     external_controls = external or ExternalControls()
     model_parameters = parameters or ModelParameters()
-    previous_issues = detect_issues(state, model_parameters)
-
-    intergovernmental_funding = (
-        external_controls.county_funding
-        + external_controls.state_funding
-        + external_controls.federal_funding
-    )
-    revenue = _tax_base(state) * policy.tax_rate + intergovernmental_funding
-    financing_cost = (
-        max(state.budget, 0.0)
-        * max(external_controls.national_interest_rate, 0.0)
-        * model_parameters.financing_cost_budget_share
-    )
-    expenses = (
-        policy.housing_investment
-        + policy.transit_investment
-        + policy.services_investment
-        + policy.environment_investment
-        + policy.business_support
-        + state.population * model_parameters.resident_service_cost_per_person
-        + financing_cost
-    )
-    budget = state.budget + revenue - expenses
-
-    housing_units = state.housing_units + _housing_units_added(
-        policy,
-        external_controls,
-        model_parameters,
-        state.sensitivity,
-    )
-    jobs_delta = _jobs_delta(state, policy, external_controls, model_parameters)
-    jobs = max(0.0, state.jobs + jobs_delta)
-
-    infrastructure = _clamp(
-        state.infrastructure
-        - model_parameters.infrastructure_annual_wear
-        + policy.transit_investment
-        / model_parameters.transit_investment_per_infrastructure_point
-        + policy.services_investment
-        / model_parameters.services_investment_per_infrastructure_point,
-        0.0,
-        100.0,
-    )
-    pollution = _clamp(
-        state.pollution
-        + state.population / model_parameters.pollution_population_divisor
-        + max(jobs_delta, 0.0) / model_parameters.pollution_jobs_divisor
-        - (policy.environment_investment + external_controls.state_environment_mandate)
-        / model_parameters.environment_spending_per_pollution_point,
-        0.0,
-        100.0,
-    )
-
-    housing_gap = state.population / 2.35 - housing_units
-    pressure_ledger = _seasonal_pressure_ledger(
-        state=state,
-        policy=policy,
-        infrastructure=infrastructure,
-        pollution=pollution,
-    )
-    satisfaction = _satisfaction(
-        state,
-        policy,
-        external_controls,
-        infrastructure,
-        pollution,
-        housing_gap,
-        model_parameters,
-        state.sensitivity,
-    )
-    population_delta = _population_delta(
-        state,
-        policy,
-        satisfaction,
-        housing_gap,
-        external_controls,
-        model_parameters,
-    )
-    population = max(0.0, state.population + population_delta)
-    demographics = _advance_demographics(state, policy, population, population_delta)
-    growth_rate = population_delta / max(state.population, 1.0)
-
-    next_state = CityState(
-        year=state.year + 1,
-        population=population,
-        demographics=demographics,
-        population_profile=state.population_profile,
-        cohort_profiles=state.cohort_profiles,
-        physical_profile=state.physical_profile,
-        civic_assets=state.civic_assets,
-        neighborhoods=state.neighborhoods,
-        place_assets=state.place_assets,
-        housing_stock=state.housing_stock,
-        housing_assistance=state.housing_assistance,
-        housing_units=housing_units,
-        jobs=jobs,
-        budget=budget,
-        infrastructure=infrastructure,
-        pollution=pollution,
-        satisfaction=satisfaction,
-        metrics=_city_metrics(
+    context = run_turn_steps(
+        AnnualTurnContext(
             state=state,
-            population=population,
-            demographics=demographics,
-            jobs=jobs,
-            jobs_delta=jobs_delta,
-            housing_units=housing_units,
-            housing_gap=housing_gap,
-            satisfaction=satisfaction,
-            infrastructure=infrastructure,
-            pollution=pollution,
-            growth_rate=growth_rate,
+            policy=policy,
+            external=external_controls,
             parameters=model_parameters,
-            sensitivity=state.sensitivity,
-            pressure_ledger=pressure_ledger,
         ),
-        sensitivity=state.sensitivity,
-        pending_effects=_advance_delayed_effects(state.pending_effects)
-        + _delayed_effects_from_pressures(pressure_ledger),
+        ANNUAL_TURN_STEPS,
     )
-    active_issues = detect_issues(next_state, model_parameters, pressure_ledger)
+
     return YearResult(
-        year=next_state.year,
-        state=next_state,
-        revenue=revenue,
-        expenses=expenses,
-        population_delta=population_delta,
-        jobs_delta=jobs_delta,
-        housing_gap=housing_gap,
-        active_issues=active_issues,
-        overcome_issues=_overcome_issues(previous_issues, active_issues),
-        pressure_ledger=pressure_ledger,
+        year=_required(context.next_state, "next_state").year,
+        state=_required(context.next_state, "next_state"),
+        revenue=_required(context.revenue, "revenue"),
+        expenses=_required(context.expenses, "expenses"),
+        population_delta=_required(context.population_delta, "population_delta"),
+        jobs_delta=_required(context.jobs_delta, "jobs_delta"),
+        housing_gap=_required(context.housing_gap, "housing_gap"),
+        active_issues=context.active_issues,
+        overcome_issues=_overcome_issues(context.previous_issues, context.active_issues),
+        pressure_ledger=_required(context.pressure_ledger, "pressure_ledger"),
     )
 
 
@@ -484,3 +377,232 @@ def _population_delta(
 def _overcome_issues(previous: list[Issue], current: list[Issue]) -> list[Issue]:
     current_codes = {issue.code for issue in current}
     return [issue for issue in previous if issue.code not in current_codes]
+
+
+def _required(value: T | None, name: str) -> T:
+    if value is None:
+        raise RuntimeError(f"annual turn step did not produce {name}")
+    return value
+
+
+def _step_validate_inputs(context: AnnualTurnContext) -> None:
+    _validate_policy(context.policy)
+    context.previous_issues = detect_issues(context.state, context.parameters)
+
+
+def _step_local_fiscal_policy(context: AnnualTurnContext) -> None:
+    intergovernmental_funding = (
+        context.external.county_funding
+        + context.external.state_funding
+        + context.external.federal_funding
+    )
+    context.revenue = _tax_base(context.state) * context.policy.tax_rate + intergovernmental_funding
+    financing_cost = (
+        max(context.state.budget, 0.0)
+        * max(context.external.national_interest_rate, 0.0)
+        * context.parameters.financing_cost_budget_share
+    )
+    context.expenses = (
+        context.policy.housing_investment
+        + context.policy.transit_investment
+        + context.policy.services_investment
+        + context.policy.environment_investment
+        + context.policy.business_support
+        + context.state.population * context.parameters.resident_service_cost_per_person
+        + financing_cost
+    )
+    context.budget = context.state.budget + context.revenue - context.expenses
+
+
+def _step_development_and_jobs(context: AnnualTurnContext) -> None:
+    context.housing_units = context.state.housing_units + _housing_units_added(
+        context.policy,
+        context.external,
+        context.parameters,
+        context.state.sensitivity,
+    )
+    context.jobs_delta = _jobs_delta(
+        context.state,
+        context.policy,
+        context.external,
+        context.parameters,
+    )
+    context.jobs = max(0.0, context.state.jobs + context.jobs_delta)
+
+
+def _step_infrastructure_environment(context: AnnualTurnContext) -> None:
+    jobs_delta = _required(context.jobs_delta, "jobs_delta")
+    context.infrastructure = _clamp(
+        context.state.infrastructure
+        - context.parameters.infrastructure_annual_wear
+        + context.policy.transit_investment
+        / context.parameters.transit_investment_per_infrastructure_point
+        + context.policy.services_investment
+        / context.parameters.services_investment_per_infrastructure_point,
+        0.0,
+        100.0,
+    )
+    context.pollution = _clamp(
+        context.state.pollution
+        + context.state.population / context.parameters.pollution_population_divisor
+        + max(jobs_delta, 0.0) / context.parameters.pollution_jobs_divisor
+        - (context.policy.environment_investment + context.external.state_environment_mandate)
+        / context.parameters.environment_spending_per_pollution_point,
+        0.0,
+        100.0,
+    )
+
+
+def _step_seasonal_pressures(context: AnnualTurnContext) -> None:
+    context.housing_gap = context.state.population / 2.35 - _required(
+        context.housing_units,
+        "housing_units",
+    )
+    context.pressure_ledger = _seasonal_pressure_ledger(
+        state=context.state,
+        policy=context.policy,
+        infrastructure=_required(context.infrastructure, "infrastructure"),
+        pollution=_required(context.pollution, "pollution"),
+    )
+
+
+def _step_satisfaction_migration_demographics(context: AnnualTurnContext) -> None:
+    context.satisfaction = _satisfaction(
+        context.state,
+        context.policy,
+        context.external,
+        _required(context.infrastructure, "infrastructure"),
+        _required(context.pollution, "pollution"),
+        _required(context.housing_gap, "housing_gap"),
+        context.parameters,
+        context.state.sensitivity,
+    )
+    context.population_delta = _population_delta(
+        context.state,
+        context.policy,
+        context.satisfaction,
+        _required(context.housing_gap, "housing_gap"),
+        context.external,
+        context.parameters,
+    )
+    context.population = max(0.0, context.state.population + context.population_delta)
+    context.demographics = _advance_demographics(
+        context.state,
+        context.policy,
+        context.population,
+        context.population_delta,
+    )
+    context.growth_rate = context.population_delta / max(context.state.population, 1.0)
+
+
+def _step_commit_state(context: AnnualTurnContext) -> None:
+    pressure_ledger = _required(context.pressure_ledger, "pressure_ledger")
+    context.next_state = CityState(
+        year=context.state.year + 1,
+        population=_required(context.population, "population"),
+        demographics=_required(context.demographics, "demographics"),
+        population_profile=context.state.population_profile,
+        cohort_profiles=context.state.cohort_profiles,
+        physical_profile=context.state.physical_profile,
+        civic_assets=context.state.civic_assets,
+        neighborhoods=context.state.neighborhoods,
+        place_assets=context.state.place_assets,
+        housing_stock=context.state.housing_stock,
+        housing_assistance=context.state.housing_assistance,
+        housing_units=_required(context.housing_units, "housing_units"),
+        jobs=_required(context.jobs, "jobs"),
+        budget=_required(context.budget, "budget"),
+        infrastructure=_required(context.infrastructure, "infrastructure"),
+        pollution=_required(context.pollution, "pollution"),
+        satisfaction=_required(context.satisfaction, "satisfaction"),
+        metrics=_city_metrics(
+            state=context.state,
+            population=_required(context.population, "population"),
+            demographics=_required(context.demographics, "demographics"),
+            jobs=_required(context.jobs, "jobs"),
+            jobs_delta=_required(context.jobs_delta, "jobs_delta"),
+            housing_units=_required(context.housing_units, "housing_units"),
+            housing_gap=_required(context.housing_gap, "housing_gap"),
+            satisfaction=_required(context.satisfaction, "satisfaction"),
+            infrastructure=_required(context.infrastructure, "infrastructure"),
+            pollution=_required(context.pollution, "pollution"),
+            growth_rate=_required(context.growth_rate, "growth_rate"),
+            parameters=context.parameters,
+            sensitivity=context.state.sensitivity,
+            pressure_ledger=pressure_ledger,
+        ),
+        sensitivity=context.state.sensitivity,
+        pending_effects=_advance_delayed_effects(context.state.pending_effects)
+        + _delayed_effects_from_pressures(pressure_ledger),
+    )
+
+
+def _step_detect_issues(context: AnnualTurnContext) -> None:
+    context.active_issues = detect_issues(
+        _required(context.next_state, "next_state"),
+        context.parameters,
+        context.pressure_ledger,
+    )
+
+
+ANNUAL_TURN_STEPS = (
+    TurnStep(
+        "validate_inputs",
+        _step_validate_inputs,
+        produces=("previous_issues",),
+    ),
+    TurnStep(
+        "local_fiscal_policy",
+        _step_local_fiscal_policy,
+        produces=("revenue", "expenses", "budget"),
+    ),
+    TurnStep(
+        "development_and_jobs",
+        _step_development_and_jobs,
+        produces=("housing_units", "jobs_delta", "jobs"),
+    ),
+    TurnStep(
+        "infrastructure_environment",
+        _step_infrastructure_environment,
+        requires=("jobs_delta",),
+        produces=("infrastructure", "pollution"),
+    ),
+    TurnStep(
+        "seasonal_pressures",
+        _step_seasonal_pressures,
+        requires=("housing_units", "infrastructure", "pollution"),
+        produces=("housing_gap", "pressure_ledger"),
+    ),
+    TurnStep(
+        "satisfaction_migration_demographics",
+        _step_satisfaction_migration_demographics,
+        requires=("infrastructure", "pollution", "housing_gap"),
+        produces=("satisfaction", "population_delta", "population", "demographics", "growth_rate"),
+    ),
+    TurnStep(
+        "commit_state",
+        _step_commit_state,
+        requires=(
+            "budget",
+            "housing_units",
+            "jobs",
+            "jobs_delta",
+            "infrastructure",
+            "pollution",
+            "housing_gap",
+            "pressure_ledger",
+            "satisfaction",
+            "population_delta",
+            "population",
+            "demographics",
+            "growth_rate",
+        ),
+        produces=("next_state",),
+    ),
+    TurnStep(
+        "detect_issues",
+        _step_detect_issues,
+        requires=("next_state", "pressure_ledger"),
+        produces=("active_issues",),
+    ),
+)

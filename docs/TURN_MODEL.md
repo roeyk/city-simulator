@@ -24,6 +24,11 @@ Each turn starts from:
 
 ## Turn Phases
 
+The source implementation exposes the annual pipeline as `ANNUAL_TURN_STEPS`.
+Each step has a stable name plus declared `requires` and `produces` fields so
+future systems can add causal layers without hiding the turn order inside one
+large function.
+
 1. Outside pressure
 
    County, state, and country inputs affect the city before local outcomes are
@@ -178,6 +183,41 @@ mid-year intervention timing becomes important. Shorter turns improve timing
 but do not remove the need for feedback modeling: even a monthly turn can
 contain daily or hourly crisis dynamics. Keep the feedback machinery explicit
 and keep annual scenario reports as a supported output.
+
+## UrbanSim-Inspired Benchmark Goal
+
+UrbanSim's examples organize a regional simulation around canonical tables,
+computed columns, named model steps, and fixed workflows. The useful benchmark
+for City Simulator is not to copy UrbanSim's full econometric or GIS stack, but
+to keep the same separation of concerns:
+
+- canonical state stores source facts;
+- views bundle related aggregate statistics derived from lower-level models;
+- named turn steps update or derive one part of the city at a time;
+- step order is explicit because later steps depend on earlier outputs;
+- reports consume step outputs and views rather than recomputing hidden logic.
+
+UrbanSim is deeper than City Simulator currently is for parcel/building-level
+real estate, household and job location choice, prices/rents, development
+feasibility, and developer behavior. City Simulator is aiming at broader civic
+coverage: crisis cascades, public sentiment, public safety, services,
+partnerships, institutions, delayed effects, and mayor-style scenario
+briefings. Treat UrbanSim as the benchmark for the land-use and real-estate
+engine, not as the full scope of the game.
+
+For real estate-style work, the eventual sequence should resemble:
+
+```text
+prices/rents view
+  household and business demand
+  development feasibility
+  developer/project pipeline
+  updated buildings or neighborhood market state
+  refreshed affordability, vacancy, displacement, and scenario comparison views
+```
+
+The current `ANNUAL_TURN_STEPS` registry is the first small move toward that
+pattern while preserving the annual turn and deterministic CLI behavior.
 
 ## Design Rules
 

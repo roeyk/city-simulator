@@ -13,6 +13,7 @@ from city_simulator import (
     simulate,
 )
 from city_simulator.model import (
+    ANNUAL_TURN_STEPS,
     CitySensitivity,
     ModelParameters,
     advance_year,
@@ -25,6 +26,26 @@ def test_simulation_advances_requested_years():
 
     assert [result.year for result in results] == [1, 2, 3]
     assert results[-1].state.year == 3
+
+
+def test_annual_turn_steps_are_named_in_dependency_order():
+    assert [step.name for step in ANNUAL_TURN_STEPS] == [
+        "validate_inputs",
+        "local_fiscal_policy",
+        "development_and_jobs",
+        "infrastructure_environment",
+        "seasonal_pressures",
+        "satisfaction_migration_demographics",
+        "commit_state",
+        "detect_issues",
+    ]
+    produced: set[str] = set()
+    for step in ANNUAL_TURN_STEPS:
+        assert set(step.requires) <= produced
+        produced.update(step.produces)
+
+    assert "next_state" in produced
+    assert "active_issues" in produced
 
 
 def test_default_policy_grows_population_and_jobs():

@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 from city_simulator.derived import active_delayed_effects
-from city_simulator.simulation import advance_year, detect_issues, simulate
+from city_simulator.simulation import (
+    ANNUAL_TURN_STEPS,
+    advance_year,
+    detect_issues,
+    simulate,
+)
 from city_simulator.state import (
     CityMetrics,
     CityPolicy,
@@ -24,6 +29,7 @@ from city_simulator.state import (
 )
 
 __all__ = [
+    "ANNUAL_TURN_STEPS",
     "CityMetrics",
     "CityPolicy",
     "CitySensitivity",
