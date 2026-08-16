@@ -1,7 +1,9 @@
 from city_simulator import (
     FamilyGenerationSpec,
+    eligible_job_template_for,
     generate_family_agents,
     generate_family_population,
+    job_template_for,
 )
 
 
@@ -119,6 +121,98 @@ def test_generate_family_population_returns_families_before_people():
         "harcourt",
         "harcourt",
     ]
+    assert population.organizations == ()
+
+
+def test_generate_family_agents_draws_city_service_jobs_from_catalog():
+    family = generate_family_agents(
+        "anglo",
+        household_index=0,
+        adults=2,
+        job_pools=("city_service",),
+        adult_education=("high_school",),
+        adult_experience_years=(4,),
+    )
+
+    assert [person.role for person in family.people] == [
+        "firefighter",
+        "police officer",
+    ]
+    assert [person.income_band for person in family.people] == ["middle", "middle"]
+
+
+def test_generate_family_agents_skips_jobs_with_unmet_prerequisites():
+    family = generate_family_agents(
+        "anglo",
+        household_index=0,
+        adults=1,
+        job_pools=("government",),
+        adult_ages=(22,),
+        adult_education=("high_school",),
+        adult_experience_years=(2,),
+    )
+
+    assert family.people[0].role == "court clerk"
+    assert family.people[0].role != "city judge"
+
+
+def test_eligible_job_template_allows_qualified_city_judge():
+    job = eligible_job_template_for(
+        "government",
+        0,
+        age=45,
+        education="graduate",
+        experience_years=15,
+    )
+
+    assert job.role == "city judge"
+    assert job.branch == "judicial"
+
+
+def test_generate_family_agents_creates_organizations_for_business_owners():
+    family = generate_family_agents(
+        "hispanic",
+        household_index=0,
+        adults=1,
+        job_pools=("business_owner",),
+        adult_education=("trade",),
+        adult_experience_years=(8,),
+    )
+
+    assert family.people[0].employment_status == "business_owner"
+    assert family.people[0].role == "landscaping business owner"
+    assert len(family.organizations) == 1
+    assert family.organizations[0].organization_type == "business"
+    assert family.organizations[0].sector == "landscaping"
+    assert "serves businesses" in family.organizations[0].notes
+
+
+def test_generate_family_population_returns_businesses_after_people():
+    population = generate_family_population(
+        (
+            FamilyGenerationSpec(
+                "hispanic",
+                household_index=0,
+                adults=1,
+                job_pools=("business_owner",),
+                adult_education=("trade",),
+                adult_experience_years=(8,),
+            ),
+        )
+    )
+
+    assert population.households[0].agent_id == "hernandez"
+    assert population.people[0].household_id == "hernandez"
+    assert population.organizations[0].sector == "landscaping"
+
+
+def test_job_template_for_rejects_unknown_pool():
+    try:
+        job_template_for("moon_base", 0)
+    except ValueError as exc:
+        assert "unknown job pool" in str(exc)
+    else:
+        raise AssertionError("unknown job pool should be rejected")
 
 
 def test_generate_family_agents_rejects_unknown_heritage():
@@ -130,8 +224,7 @@ def test_generate_family_agents_rejects_unknown_heritage():
         raise AssertionError("unknown heritage should be rejected")
 
 
-def test_generate_family_agents_rejects_invalid_family_sizes(
-):
+def test_generate_family_agents_rejects_invalid_family_sizes():
     invalid_sizes = (
         (-1, 0, "non-negative"),
         (0, -1, "non-negative"),
@@ -144,6 +237,15 @@ def test_generate_family_agents_rejects_invalid_family_sizes(
             assert match in str(exc)
         else:
             raise AssertionError("invalid family size should be rejected")
+
+
+def test_generate_family_agents_rejects_child_parent():
+    try:
+        generate_family_agents("anglo", adults=1, adult_ages=(5,))
+    except ValueError as exc:
+        assert "at least 18 years old" in str(exc)
+    else:
+        raise AssertionError("child adult profile should be rejected")
 
 
 def test_generate_family_agents_rejects_invalid_weight():

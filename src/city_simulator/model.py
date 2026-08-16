@@ -45,10 +45,18 @@ from city_simulator.state import (
     ZoningEnvelope,
 )
 from city_simulator.views import PopulationStructureView, View
+from city_simulator.work_catalog import (
+    BusinessType,
+    JobTemplate,
+    business_type_for,
+    eligible_job_template_for,
+    job_template_for,
+)
 
 __all__ = [
     "ANNUAL_TURN_STEPS",
     "Agent",
+    "BusinessType",
     "CityMetrics",
     "CityPolicy",
     "CityRevenueSources",
@@ -66,6 +74,7 @@ __all__ = [
     "HousingAssistance",
     "HousingStock",
     "Issue",
+    "JobTemplate",
     "LivingConditions",
     "ModelParameters",
     "Neighborhood",
@@ -80,9 +89,12 @@ __all__ = [
     "ZoningEnvelope",
     "active_delayed_effects",
     "advance_year",
+    "business_type_for",
     "detect_issues",
+    "eligible_job_template_for",
     "generate_family_agents",
     "generate_family_population",
+    "job_template_for",
     "living_conditions_for",
     "simulate",
 ]

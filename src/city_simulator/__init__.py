@@ -47,11 +47,19 @@ from city_simulator.person_generator import (
 from city_simulator.scenario import ScenarioError, load_city, load_scenario
 from city_simulator.starter import STARTER_PRESETS, starter_city, write_starter_city
 from city_simulator.views import PopulationStructureView, View
+from city_simulator.work_catalog import (
+    BusinessType,
+    JobTemplate,
+    business_type_for,
+    eligible_job_template_for,
+    job_template_for,
+)
 
 __all__ = [
     "ANNUAL_TURN_STEPS",
     "STARTER_PRESETS",
     "Agent",
+    "BusinessType",
     "Citizen",
     "CityMetrics",
     "CityPolicy",
@@ -69,6 +77,7 @@ __all__ = [
     "HousingAssistance",
     "HousingStock",
     "Issue",
+    "JobTemplate",
     "LivingConditions",
     "ModelParameters",
     "Neighborhood",
@@ -84,9 +93,12 @@ __all__ = [
     "ZoningEnvelope",
     "active_delayed_effects",
     "advance_citizen_histories",
+    "business_type_for",
+    "eligible_job_template_for",
     "generate_family_agents",
     "generate_family_population",
     "generate_representative_citizens",
+    "job_template_for",
     "living_conditions_for",
     "load_city",
     "load_scenario",
