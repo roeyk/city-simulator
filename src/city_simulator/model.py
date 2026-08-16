@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from city_simulator.agents import Agent, HouseholdAgent, OrganizationAgent, PersonAgent
 from city_simulator.derived import active_delayed_effects
 from city_simulator.simulation import (
     ANNUAL_TURN_STEPS,
@@ -32,6 +33,7 @@ from city_simulator.views import PopulationStructureView, View
 
 __all__ = [
     "ANNUAL_TURN_STEPS",
+    "Agent",
     "CityMetrics",
     "CityPolicy",
     "CitySensitivity",
@@ -41,12 +43,15 @@ __all__ = [
     "EmbeddedService",
     "ExternalControls",
     "FinancialInstitutionProfile",
+    "HouseholdAgent",
     "HousingAssistance",
     "HousingStock",
     "Issue",
     "ModelParameters",
     "Neighborhood",
     "OperatingSchedule",
+    "OrganizationAgent",
+    "PersonAgent",
     "PlaceAsset",
     "PopulationStructureView",
     "PressureLedger",

@@ -1,5 +1,6 @@
 """Statistics-first city simulation package."""
 
+from city_simulator.agents import Agent, HouseholdAgent, OrganizationAgent, PersonAgent
 from city_simulator.citizens import (
     Citizen,
     advance_citizen_histories,
@@ -35,6 +36,7 @@ from city_simulator.views import PopulationStructureView, View
 __all__ = [
     "ANNUAL_TURN_STEPS",
     "STARTER_PRESETS",
+    "Agent",
     "Citizen",
     "CityMetrics",
     "CityPolicy",
@@ -44,12 +46,15 @@ __all__ = [
     "Demographics",
     "EmbeddedService",
     "FinancialInstitutionProfile",
+    "HouseholdAgent",
     "HousingAssistance",
     "HousingStock",
     "Issue",
     "ModelParameters",
     "Neighborhood",
     "OperatingSchedule",
+    "OrganizationAgent",
+    "PersonAgent",
     "PlaceAsset",
     "PopulationStructureView",
     "PressureLedger",

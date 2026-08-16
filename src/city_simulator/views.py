@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import ClassVar, TypeVar
 
+from city_simulator.agents import PersonAgent
 from city_simulator.state import CityState
 
 ViewT = TypeVar("ViewT", bound="View")
@@ -52,6 +53,27 @@ class PopulationStructureView(View):
             middle_income_share=demographics.middle_income / population,
             high_income_share=demographics.high_income / population,
             dependency_ratio=dependents / max(demographics.working_age, 1.0),
+        )
+
+    @classmethod
+    def derive_from_people(cls, people: tuple[PersonAgent, ...]) -> PopulationStructureView:
+        total_population = sum(person.weight for person in people)
+        population = max(total_population, 1.0)
+        children = sum(person.weight for person in people if person.is_child)
+        working_age = sum(person.weight for person in people if person.is_working_age)
+        seniors = sum(person.weight for person in people if person.is_senior)
+        low_income = sum(person.weight for person in people if person.income_band == "low")
+        middle_income = sum(person.weight for person in people if person.income_band == "middle")
+        high_income = sum(person.weight for person in people if person.income_band == "high")
+        return cls(
+            total_population=total_population,
+            child_share=children / population,
+            working_age_share=working_age / population,
+            senior_share=seniors / population,
+            low_income_share=low_income / population,
+            middle_income_share=middle_income / population,
+            high_income_share=high_income / population,
+            dependency_ratio=(children + seniors) / max(working_age, 1.0),
         )
 
     def as_dict(self) -> dict[str, float]:
