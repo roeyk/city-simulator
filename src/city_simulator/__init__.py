@@ -55,9 +55,11 @@ from city_simulator.views import PopulationStructureView, View
 from city_simulator.work_catalog import (
     BusinessType,
     JobTemplate,
+    TradeSchoolProgram,
     business_type_for,
     eligible_job_template_for,
     job_template_for,
+    trade_school_program_for,
 )
 
 __all__ = [
@@ -98,6 +100,7 @@ __all__ = [
     "PopulationStructureView",
     "PressureLedger",
     "ScenarioError",
+    "TradeSchoolProgram",
     "View",
     "YearResult",
     "ZoningEnvelope",
@@ -114,5 +117,6 @@ __all__ = [
     "load_scenario",
     "simulate",
     "starter_city",
+    "trade_school_program_for",
     "write_starter_city",
 ]

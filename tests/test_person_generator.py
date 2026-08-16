@@ -4,6 +4,7 @@ from city_simulator import (
     generate_family_agents,
     generate_family_population,
     job_template_for,
+    trade_school_program_for,
 )
 
 
@@ -190,6 +191,58 @@ def test_eligible_job_template_allows_qualified_city_judge():
     assert job.branch == "judicial"
 
 
+def test_trade_school_jobs_include_hvac_and_roofing_paths():
+    hvac = eligible_job_template_for(
+        "private_service",
+        3,
+        age=26,
+        education="trade",
+        experience_years=3,
+    )
+    roofing = eligible_job_template_for(
+        "private_service",
+        4,
+        age=26,
+        education="trade",
+        experience_years=3,
+    )
+
+    assert hvac.role == "HVAC technician"
+    assert hvac.sector == "hvac_services"
+    assert roofing.role == "roofer"
+    assert roofing.sector == "roofing_services"
+
+
+def test_trade_school_program_catalog_includes_core_choices():
+    programs = [trade_school_program_for(index) for index in range(16)]
+
+    assert [program.program for program in programs[:3]] == [
+        "plumbing technology",
+        "HVAC technology",
+        "roofing",
+    ]
+    assert {program.program for program in programs} >= {
+        "electrical technology",
+        "carpentry",
+        "masonry",
+        "welding",
+        "automotive service technology",
+        "diesel technology",
+        "heavy equipment maintenance",
+        "appliance repair",
+        "security system installation",
+        "building inspection",
+        "drywall installation",
+        "flooring installation",
+        "solar photovoltaic installation",
+    }
+    assert trade_school_program_for(1).typical_skills == (
+        "heating systems",
+        "air conditioning",
+        "refrigeration",
+    )
+
+
 def test_generate_family_agents_creates_organizations_for_business_owners():
     family = generate_family_agents(
         "hispanic",
@@ -212,6 +265,30 @@ def test_generate_family_agents_creates_organizations_for_business_owners():
         "city_contracts",
     )
     assert "serves businesses" in family.organizations[0].notes
+
+
+def test_business_owner_jobs_include_hvac_and_roofing_businesses():
+    hvac_family = generate_family_agents(
+        "anglo",
+        household_index=3,
+        adults=1,
+        job_pools=("business_owner",),
+        adult_education=("trade",),
+        adult_experience_years=(8,),
+    )
+    roofing_family = generate_family_agents(
+        "anglo",
+        household_index=4,
+        adults=1,
+        job_pools=("business_owner",),
+        adult_education=("trade",),
+        adult_experience_years=(8,),
+    )
+
+    assert hvac_family.people[0].role == "HVAC business owner"
+    assert hvac_family.organizations[0].sector == "hvac_services"
+    assert roofing_family.people[0].role == "roofing business owner"
+    assert roofing_family.organizations[0].sector == "roofing_services"
 
 
 def test_generate_family_population_returns_businesses_after_people():

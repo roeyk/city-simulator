@@ -30,6 +30,16 @@ class BusinessType:
     income_band: str = "middle"
 
 
+@dataclass(frozen=True)
+class TradeSchoolProgram:
+    program: str
+    sector: str
+    credential: str = "certificate"
+    discipline: str = "skilled trades"
+    typical_skills: tuple[str, ...] = ()
+    prepares_for_roles: tuple[str, ...] = ()
+
+
 CITY_SERVICE_JOBS: tuple[JobTemplate, ...] = (
     JobTemplate(
         role="firefighter",
@@ -118,6 +128,106 @@ GOVERNMENT_JOBS: tuple[JobTemplate, ...] = (
 )
 
 
+TRADE_SCHOOL_PROGRAMS: tuple[TradeSchoolProgram, ...] = (
+    TradeSchoolProgram(
+        program="plumbing technology",
+        sector="plumbing_services",
+        typical_skills=("pipefitting", "water systems", "fixture installation"),
+        prepares_for_roles=("plumber", "pipefitter"),
+    ),
+    TradeSchoolProgram(
+        program="HVAC technology",
+        sector="hvac_services",
+        typical_skills=("heating systems", "air conditioning", "refrigeration"),
+        prepares_for_roles=("HVAC technician",),
+    ),
+    TradeSchoolProgram(
+        program="roofing",
+        sector="roofing_services",
+        typical_skills=("roof repair", "weatherproofing", "fall safety"),
+        prepares_for_roles=("roofer",),
+    ),
+    TradeSchoolProgram(
+        program="electrical technology",
+        sector="electrical_services",
+        typical_skills=("wiring", "power systems", "code compliance"),
+        prepares_for_roles=("electrician", "lineworker"),
+    ),
+    TradeSchoolProgram(
+        program="carpentry",
+        sector="carpentry_services",
+        typical_skills=("framing", "finish carpentry", "blueprint reading"),
+        prepares_for_roles=("carpenter",),
+    ),
+    TradeSchoolProgram(
+        program="masonry",
+        sector="masonry_services",
+        typical_skills=("brickwork", "blockwork", "stone setting"),
+        prepares_for_roles=("masonry worker",),
+    ),
+    TradeSchoolProgram(
+        program="welding",
+        sector="welding_services",
+        typical_skills=("arc welding", "metal fabrication", "safety inspection"),
+        prepares_for_roles=("welder",),
+    ),
+    TradeSchoolProgram(
+        program="automotive service technology",
+        sector="auto_services",
+        typical_skills=("engine repair", "diagnostics", "brake systems"),
+        prepares_for_roles=("automotive service technician",),
+    ),
+    TradeSchoolProgram(
+        program="diesel technology",
+        sector="diesel_repair",
+        typical_skills=("diesel engines", "hydraulics", "fleet maintenance"),
+        prepares_for_roles=("diesel mechanic",),
+    ),
+    TradeSchoolProgram(
+        program="heavy equipment maintenance",
+        sector="heavy_equipment_repair",
+        typical_skills=("hydraulics", "drivetrains", "preventive maintenance"),
+        prepares_for_roles=("heavy equipment mechanic",),
+    ),
+    TradeSchoolProgram(
+        program="appliance repair",
+        sector="appliance_repair",
+        typical_skills=("appliance diagnostics", "electrical repair", "customer service"),
+        prepares_for_roles=("appliance repair technician",),
+    ),
+    TradeSchoolProgram(
+        program="security system installation",
+        sector="security_systems",
+        typical_skills=("low-voltage wiring", "alarm systems", "access control"),
+        prepares_for_roles=("security system installer",),
+    ),
+    TradeSchoolProgram(
+        program="building inspection",
+        sector="building_inspection",
+        typical_skills=("code review", "field inspection", "permit compliance"),
+        prepares_for_roles=("building inspector",),
+    ),
+    TradeSchoolProgram(
+        program="drywall installation",
+        sector="drywall_services",
+        typical_skills=("wallboard installation", "taping", "finishing"),
+        prepares_for_roles=("drywall installer",),
+    ),
+    TradeSchoolProgram(
+        program="flooring installation",
+        sector="flooring_services",
+        typical_skills=("tile setting", "carpet installation", "subfloor preparation"),
+        prepares_for_roles=("flooring installer",),
+    ),
+    TradeSchoolProgram(
+        program="solar photovoltaic installation",
+        sector="solar_installation",
+        typical_skills=("solar panel installation", "roof mounting", "electrical safety"),
+        prepares_for_roles=("solar photovoltaic installer",),
+    ),
+)
+
+
 PRIVATE_SERVICE_JOBS: tuple[JobTemplate, ...] = (
     JobTemplate(
         role="retail salesperson",
@@ -143,6 +253,28 @@ PRIVATE_SERVICE_JOBS: tuple[JobTemplate, ...] = (
         income_band="middle",
         employer_type="private_business",
         sector="plumbing_services",
+        serves=("residents", "businesses"),
+        organization_type="business",
+        required_education="trade",
+        min_experience_years=1,
+    ),
+    JobTemplate(
+        role="HVAC technician",
+        employment_status="employed",
+        income_band="middle",
+        employer_type="private_business",
+        sector="hvac_services",
+        serves=("residents", "businesses"),
+        organization_type="business",
+        required_education="trade",
+        min_experience_years=1,
+    ),
+    JobTemplate(
+        role="roofer",
+        employment_status="employed",
+        income_band="middle",
+        employer_type="private_business",
+        sector="roofing_services",
         serves=("residents", "businesses"),
         organization_type="business",
         required_education="trade",
@@ -187,6 +319,18 @@ OWNER_OPERATED_BUSINESSES: tuple[BusinessType, ...] = (
         display_name="plumbing services business",
         customer_types=("residents", "businesses"),
         typical_owner_role="plumbing business owner",
+    ),
+    BusinessType(
+        sector="hvac_services",
+        display_name="HVAC services business",
+        customer_types=("residents", "businesses"),
+        typical_owner_role="HVAC business owner",
+    ),
+    BusinessType(
+        sector="roofing_services",
+        display_name="roofing services business",
+        customer_types=("residents", "businesses"),
+        typical_owner_role="roofing business owner",
     ),
     BusinessType(
         sector="professional_services",
@@ -266,6 +410,10 @@ def is_eligible_for_job(
 
 def business_type_for(index: int) -> BusinessType:
     return _pick(OWNER_OPERATED_BUSINESSES, index)
+
+
+def trade_school_program_for(index: int) -> TradeSchoolProgram:
+    return _pick(TRADE_SCHOOL_PROGRAMS, index)
 
 
 def _pick(values: tuple[T, ...], index: int) -> T:
