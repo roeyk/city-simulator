@@ -80,14 +80,22 @@ large function.
    Age and income cohorts advance from the new population total. For now this is
    aggregate and deterministic; richer cohort mechanics should come later.
 
-8. Sentiment
+8. Labor market
+
+   Resident employment, unemployment, vacancies, commuters, and labor force
+   participation are derived as explicit annual turn outputs before sentiment
+   and final metrics are committed.
+
+9. Sentiment
 
    Public sentiment is derived from multiple signals rather than copied from
    satisfaction. Current signal channels include surveys, migration behavior,
    business behavior, consumer spending, savings security, housing stress,
-   safety, services, civic trust, and future confidence.
+   safety, services, civic trust, and future confidence. The annual turn exposes
+   crime, the sentiment signal map, and the final public sentiment score as
+   named intermediates before the new state is committed.
 
-9. Issues and resolutions
+10. Issues and resolutions
 
    The simulator detects active issues from the new city state and compares them
    with the previous year's issues to identify what was overcome. If an
@@ -95,13 +103,13 @@ large function.
    feedback passes, the unresolved cascade should become an active issue or
    model warning rather than being silently hidden.
 
-10. Citizen histories
+11. Citizen histories
 
    Optional representative citizen records age by one year, update employment
    and housing status, and append a story line describing how the turn affected
    them.
 
-11. Report
+12. Report
 
    The turn produces a `YearResult`: updated state, revenue, expenses,
    population delta, jobs delta, housing gap, active issues, and overcome

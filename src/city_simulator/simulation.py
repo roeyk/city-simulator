@@ -2,8 +2,14 @@ from __future__ import annotations
 
 from typing import TypeVar
 
-from city_simulator.derived import _clamp
-from city_simulator.metrics import _city_metrics, _labor_market
+from city_simulator.derived import _clamp, _service_coverage
+from city_simulator.metrics import (
+    _city_metrics,
+    _crime,
+    _labor_market,
+    _public_sentiment,
+    _sentiment_signals,
+)
 from city_simulator.pressures import (
     _delayed_effects_from_pressures,
     _seasonal_pressure_ledger,
@@ -507,6 +513,42 @@ def _step_labor_market(context: AnnualTurnContext) -> None:
     )
 
 
+def _step_sentiment(context: AnnualTurnContext) -> None:
+    population = _required(context.population, "population")
+    labor_market = _required(context.labor_market, "labor_market")
+    housing_pressure = max(_required(context.housing_gap, "housing_gap"), 0.0) / max(
+        population,
+        1.0,
+    )
+    service_coverage = _service_coverage(context.state)
+    context.crime = _crime(
+        satisfaction=_required(context.satisfaction, "satisfaction"),
+        pollution=_required(context.pollution, "pollution"),
+        unemployment_rate=labor_market["unemployment_rate"],
+        housing_pressure=housing_pressure,
+        service_coverage=service_coverage,
+        parameters=context.parameters,
+        sensitivity=context.state.sensitivity,
+    )
+    context.sentiment_signals = _sentiment_signals(
+        state=context.state,
+        demographics=_required(context.demographics, "demographics"),
+        satisfaction=_required(context.satisfaction, "satisfaction"),
+        growth_rate=_required(context.growth_rate, "growth_rate"),
+        jobs_delta=_required(context.jobs_delta, "jobs_delta"),
+        pollution=_required(context.pollution, "pollution"),
+        unemployment_rate=labor_market["unemployment_rate"],
+        job_vacancy_rate=labor_market["job_vacancy_rate"],
+        crime=context.crime,
+        housing_pressure=housing_pressure,
+        service_coverage=service_coverage,
+        parameters=context.parameters,
+        sensitivity=context.state.sensitivity,
+        pressure_ledger=_required(context.pressure_ledger, "pressure_ledger"),
+    )
+    context.public_sentiment = _public_sentiment(context.sentiment_signals, context.parameters)
+
+
 def _step_commit_state(context: AnnualTurnContext) -> None:
     pressure_ledger = _required(context.pressure_ledger, "pressure_ledger")
     context.next_state = CityState(
@@ -543,6 +585,9 @@ def _step_commit_state(context: AnnualTurnContext) -> None:
             sensitivity=context.state.sensitivity,
             pressure_ledger=pressure_ledger,
             labor_market=_required(context.labor_market, "labor_market"),
+            crime=_required(context.crime, "crime"),
+            sentiment_signals=_required(context.sentiment_signals, "sentiment_signals"),
+            public_sentiment=_required(context.public_sentiment, "public_sentiment"),
         ),
         sensitivity=context.state.sensitivity,
         pending_effects=_advance_delayed_effects(context.state.pending_effects)
@@ -599,6 +644,22 @@ ANNUAL_TURN_STEPS = (
         produces=("labor_market",),
     ),
     TurnStep(
+        "sentiment",
+        _step_sentiment,
+        requires=(
+            "jobs_delta",
+            "pollution",
+            "housing_gap",
+            "pressure_ledger",
+            "satisfaction",
+            "population",
+            "demographics",
+            "growth_rate",
+            "labor_market",
+        ),
+        produces=("crime", "sentiment_signals", "public_sentiment"),
+    ),
+    TurnStep(
         "commit_state",
         _step_commit_state,
         requires=(
@@ -616,6 +677,9 @@ ANNUAL_TURN_STEPS = (
             "demographics",
             "growth_rate",
             "labor_market",
+            "crime",
+            "sentiment_signals",
+            "public_sentiment",
         ),
         produces=("next_state",),
     ),

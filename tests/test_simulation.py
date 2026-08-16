@@ -37,6 +37,7 @@ def test_annual_turn_steps_are_named_in_dependency_order():
         "seasonal_pressures",
         "satisfaction_migration_demographics",
         "labor_market",
+        "sentiment",
         "commit_state",
         "detect_issues",
     ]
@@ -47,6 +48,8 @@ def test_annual_turn_steps_are_named_in_dependency_order():
 
     assert "next_state" in produced
     assert "labor_market" in produced
+    assert "sentiment_signals" in produced
+    assert "public_sentiment" in produced
     assert "active_issues" in produced
 
 

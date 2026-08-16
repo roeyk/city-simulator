@@ -32,6 +32,9 @@ def _city_metrics(
     sensitivity: CitySensitivity,
     pressure_ledger: PressureLedger | None = None,
     labor_market: dict[str, float] | None = None,
+    crime: float | None = None,
+    sentiment_signals: dict[str, float] | None = None,
+    public_sentiment: float | None = None,
 ) -> CityMetrics:
     ledger = pressure_ledger or PressureLedger()
     service_coverage = _service_coverage(state)
@@ -47,38 +50,48 @@ def _city_metrics(
     unemployment_rate = labor["unemployment_rate"]
     housing_pressure = max(housing_gap, 0.0) / max(population, 1.0)
     density = _density(population, state)
-    crime = _clamp(
-        parameters.base_crime
-        + unemployment_rate
-        * parameters.crime_unemployment_multiplier
-        * sensitivity.crime_unemployment
-        + housing_pressure * parameters.crime_housing_multiplier * sensitivity.crime_housing
-        + max(50.0 - satisfaction, 0.0) * parameters.crime_low_satisfaction_multiplier
-        + max(pollution - 55.0, 0.0) * parameters.crime_pollution_multiplier
-        - service_coverage * parameters.crime_service_mitigation * sensitivity.crime_services,
-        0.0,
-        100.0,
+    crime_score = (
+        crime
+        if crime is not None
+        else _crime(
+            satisfaction=satisfaction,
+            pollution=pollution,
+            unemployment_rate=unemployment_rate,
+            housing_pressure=housing_pressure,
+            service_coverage=service_coverage,
+            parameters=parameters,
+            sensitivity=sensitivity,
+        )
     )
-    sentiment_signals = _sentiment_signals(
-        state=state,
-        demographics=demographics,
-        satisfaction=satisfaction,
-        growth_rate=growth_rate,
-        jobs_delta=jobs_delta,
-        pollution=pollution,
-        unemployment_rate=unemployment_rate,
-        job_vacancy_rate=labor["job_vacancy_rate"],
-        crime=crime,
-        housing_pressure=housing_pressure,
-        service_coverage=service_coverage,
-        parameters=parameters,
-        sensitivity=sensitivity,
-        pressure_ledger=ledger,
+    signals = (
+        sentiment_signals
+        if sentiment_signals is not None
+        else _sentiment_signals(
+            state=state,
+            demographics=demographics,
+            satisfaction=satisfaction,
+            growth_rate=growth_rate,
+            jobs_delta=jobs_delta,
+            pollution=pollution,
+            unemployment_rate=unemployment_rate,
+            job_vacancy_rate=labor["job_vacancy_rate"],
+            crime=crime_score,
+            housing_pressure=housing_pressure,
+            service_coverage=service_coverage,
+            parameters=parameters,
+            sensitivity=sensitivity,
+            pressure_ledger=ledger,
+        )
+    )
+    sentiment = (
+        public_sentiment
+        if public_sentiment is not None
+        else _public_sentiment(signals, parameters)
     )
     return CityMetrics(
         happiness=satisfaction,
-        public_sentiment=_public_sentiment(sentiment_signals, parameters),
-        crime=crime,
+        public_sentiment=sentiment,
+        crime=crime_score,
         growth_rate=growth_rate,
         labor_force=labor["labor_force"],
         employed_residents=labor["employed_residents"],
@@ -92,7 +105,7 @@ def _city_metrics(
         housing_pressure=housing_pressure,
         density_per_square_mile=density,
         service_coverage=service_coverage,
-        sentiment_signals=sentiment_signals,
+        sentiment_signals=signals,
     )
 
 
@@ -175,6 +188,29 @@ def _education_mismatch(
         - college_or_higher / 700,
         0.02,
         0.18,
+    )
+
+
+def _crime(
+    satisfaction: float,
+    pollution: float,
+    unemployment_rate: float,
+    housing_pressure: float,
+    service_coverage: float,
+    parameters: ModelParameters,
+    sensitivity: CitySensitivity,
+) -> float:
+    return _clamp(
+        parameters.base_crime
+        + unemployment_rate
+        * parameters.crime_unemployment_multiplier
+        * sensitivity.crime_unemployment
+        + housing_pressure * parameters.crime_housing_multiplier * sensitivity.crime_housing
+        + max(50.0 - satisfaction, 0.0) * parameters.crime_low_satisfaction_multiplier
+        + max(pollution - 55.0, 0.0) * parameters.crime_pollution_multiplier
+        - service_coverage * parameters.crime_service_mitigation * sensitivity.crime_services,
+        0.0,
+        100.0,
     )
 
 
