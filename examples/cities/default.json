@@ -1,0 +1,17 @@
+{
+  "population": 100000,
+  "demographics": {
+    "children": 18500,
+    "working_age": 62000,
+    "seniors": 19500,
+    "low_income": 34000,
+    "middle_income": 48000,
+    "high_income": 18000
+  },
+  "housing_units": 43000,
+  "jobs": 58000,
+  "budget": 125000000,
+  "infrastructure": 72,
+  "pollution": 38,
+  "satisfaction": 61
+}

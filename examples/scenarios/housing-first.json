@@ -1,0 +1,21 @@
+{
+  "name": "housing first",
+  "years": 10,
+  "policy": {
+    "tax_rate": 0.2,
+    "housing_investment": 70000000,
+    "transit_investment": 18000000,
+    "services_investment": 26000000,
+    "environment_investment": 8000000,
+    "business_support": 9000000,
+    "citizen_influx_rate": 0.008,
+    "citizen_outflux_rate": 0.002,
+    "zoning_restrictiveness": 0.15,
+    "permitting_speed": 0.85,
+    "development_restriction": 0.1
+  },
+  "county": {
+    "funding": 10000000,
+    "housing_directive": 25000000
+  }
+}

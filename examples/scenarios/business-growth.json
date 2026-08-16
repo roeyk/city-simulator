@@ -1,0 +1,23 @@
+{
+  "name": "business growth",
+  "years": 10,
+  "policy": {
+    "tax_rate": 0.16,
+    "housing_investment": 25000000,
+    "transit_investment": 18000000,
+    "services_investment": 18000000,
+    "environment_investment": 6000000,
+    "business_support": 55000000,
+    "citizen_influx_rate": 0.012,
+    "citizen_outflux_rate": 0.004,
+    "zoning_restrictiveness": 0.3,
+    "permitting_speed": 0.7,
+    "development_restriction": 0.15
+  },
+  "country": {
+    "funding": 15000000,
+    "growth_pressure": 0.003,
+    "interest_rate": 0.035,
+    "unemployment_pressure": 0.01
+  }
+}

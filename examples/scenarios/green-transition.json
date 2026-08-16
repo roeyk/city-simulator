@@ -1,0 +1,22 @@
+{
+  "name": "green transition",
+  "years": 10,
+  "policy": {
+    "tax_rate": 0.21,
+    "housing_investment": 30000000,
+    "transit_investment": 42000000,
+    "services_investment": 24000000,
+    "environment_investment": 45000000,
+    "business_support": 8000000,
+    "citizen_influx_rate": 0.005,
+    "citizen_outflux_rate": 0.002,
+    "zoning_restrictiveness": 0.4,
+    "permitting_speed": 0.5,
+    "development_restriction": 0.35
+  },
+  "state": {
+    "funding": 18000000,
+    "environment_mandate": 30000000,
+    "service_mandate": 12000000
+  }
+}
