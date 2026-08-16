@@ -128,6 +128,29 @@ class HousingAssistance:
 
 
 @dataclass(frozen=True)
+class ZoningEnvelope:
+    allowed_uses: tuple[str, ...] = ("residential",)
+    overlay_tags: tuple[str, ...] = ()
+    special_permit_uses: tuple[str, ...] = ()
+    max_housing_units: float = 0.0
+    max_commercial_jobs: float = 0.0
+    max_industrial_jobs: float = 0.0
+    max_civic_capacity: float = 0.0
+    max_density_per_square_mile: float = 0.0
+    max_floor_area_ratio: float = 0.0
+    max_height_stories: float = 0.0
+    max_lot_coverage: float = 0.0
+    parking_spaces_per_home: float = 0.0
+    inclusionary_housing_share: float = 0.0
+    affordable_housing_bonus: float = 0.0
+    historic_preservation_score: float = 0.0
+    environmental_constraint_score: float = 0.0
+    transit_oriented_development_score: float = 0.0
+    redevelopment_priority: float = 0.0
+    industrial_protection_score: float = 0.0
+
+
+@dataclass(frozen=True)
 class OperatingSchedule:
     schedule_type: str = "unspecified"
     days: tuple[str, ...] = ()
@@ -281,6 +304,7 @@ class Neighborhood:
     service_access: dict[str, float] = field(default_factory=dict)
     housing_stock: HousingStock = HousingStock()
     housing_assistance: HousingAssistance = HousingAssistance()
+    zoning: ZoningEnvelope = ZoningEnvelope()
     place_assets: tuple[PlaceAsset, ...] = ()
 
     def service_capacity(self, service_type: str | None = None) -> float:
@@ -433,4 +457,3 @@ class YearResult:
     active_issues: list[Issue]
     overcome_issues: list[Issue]
     pressure_ledger: PressureLedger = field(default_factory=PressureLedger)
-

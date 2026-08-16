@@ -26,6 +26,7 @@ from city_simulator.state import (
     PlaceAsset,
     PressureLedger,
     YearResult,
+    ZoningEnvelope,
 )
 
 __all__ = [
@@ -48,6 +49,7 @@ __all__ = [
     "PlaceAsset",
     "PressureLedger",
     "YearResult",
+    "ZoningEnvelope",
     "active_delayed_effects",
     "advance_year",
     "detect_issues",

@@ -20,6 +20,7 @@ from city_simulator.model import (
     Neighborhood,
     OperatingSchedule,
     PlaceAsset,
+    ZoningEnvelope,
 )
 from city_simulator.storage import city_path, scenario_path
 
@@ -161,13 +162,16 @@ def _neighborhoods_from_mapping(data: dict[str, Any]) -> dict[str, Neighborhood]
         housing_assistance_data = value.get("housing_assistance", {})
         if not isinstance(housing_assistance_data, dict):
             raise ScenarioError(f"neighborhood {key} housing_assistance must be an object")
+        zoning_data = value.get("zoning", {})
+        if not isinstance(zoning_data, dict):
+            raise ScenarioError(f"neighborhood {key} zoning must be an object")
         place_assets_data = value.get("place_assets", ())
         if not isinstance(place_assets_data, list | tuple):
             raise ScenarioError(f"neighborhood {key} place_assets must be an array")
         neighborhood_data = {
             field_key: field_value
             for field_key, field_value in value.items()
-            if field_key not in {"housing_stock", "housing_assistance", "place_assets"}
+            if field_key not in {"housing_stock", "housing_assistance", "zoning", "place_assets"}
         }
         if "name" not in neighborhood_data:
             neighborhood_data["name"] = key
@@ -191,6 +195,10 @@ def _neighborhoods_from_mapping(data: dict[str, Any]) -> dict[str, Neighborhood]
                     housing_assistance_data,
                     f"neighborhood {key} housing_assistance",
                 ),
+                "zoning": _zoning_envelope_from_mapping(
+                    zoning_data,
+                    f"neighborhood {key} zoning",
+                ),
                 "place_assets": _place_assets_from_sequence(
                     place_assets_data,
                     f"neighborhood {key} place_assets",
@@ -200,6 +208,12 @@ def _neighborhoods_from_mapping(data: dict[str, Any]) -> dict[str, Neighborhood]
             f"neighborhood {key}",
         )
     return neighborhoods
+
+
+def _zoning_envelope_from_mapping(data: dict[str, Any], label: str) -> ZoningEnvelope:
+    zoning_data = dict(data)
+    _tupleize(zoning_data, ("allowed_uses", "overlay_tags", "special_permit_uses"))
+    return _dataclass_from_mapping(ZoningEnvelope, zoning_data, label)
 
 
 def _place_assets_from_sequence(

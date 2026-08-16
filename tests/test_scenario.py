@@ -95,6 +95,82 @@ def test_city_from_mapping_reads_neighborhood_microcosms():
     assert neighborhood.housing_assistance.usable_vouchers == pytest.approx(50.4)
 
 
+def test_city_from_mapping_reads_neighborhood_zoning_envelopes():
+    city = city_from_mapping(
+        {
+            "neighborhoods": {
+                "station-quarter": {
+                    "zoning": {
+                        "allowed_uses": [
+                            "residential",
+                            "commercial",
+                            "mixed_use",
+                            "civic",
+                        ],
+                        "overlay_tags": [
+                            "inclusionary_zoning",
+                            "transit_oriented_development",
+                            "redevelopment_district",
+                        ],
+                        "special_permit_uses": ["institutional", "special_purpose"],
+                        "max_housing_units": 6200,
+                        "max_commercial_jobs": 2400,
+                        "max_industrial_jobs": 120,
+                        "max_civic_capacity": 900,
+                        "max_density_per_square_mile": 18000,
+                        "max_floor_area_ratio": 4.5,
+                        "max_height_stories": 12,
+                        "max_lot_coverage": 0.82,
+                        "parking_spaces_per_home": 0.4,
+                        "inclusionary_housing_share": 0.18,
+                        "affordable_housing_bonus": 0.25,
+                        "historic_preservation_score": 0.15,
+                        "environmental_constraint_score": 0.2,
+                        "transit_oriented_development_score": 0.85,
+                        "redevelopment_priority": 0.7,
+                        "industrial_protection_score": 0.1,
+                    }
+                }
+            }
+        }
+    )
+
+    zoning = city.neighborhoods["station-quarter"].zoning
+    assert zoning.allowed_uses == ("residential", "commercial", "mixed_use", "civic")
+    assert zoning.overlay_tags == (
+        "inclusionary_zoning",
+        "transit_oriented_development",
+        "redevelopment_district",
+    )
+    assert zoning.special_permit_uses == ("institutional", "special_purpose")
+    assert zoning.max_housing_units == 6200
+    assert zoning.max_commercial_jobs == 2400
+    assert zoning.max_floor_area_ratio == pytest.approx(4.5)
+    assert zoning.parking_spaces_per_home == pytest.approx(0.4)
+    assert zoning.inclusionary_housing_share == pytest.approx(0.18)
+    assert zoning.transit_oriented_development_score == pytest.approx(0.85)
+
+
+def test_city_from_mapping_rejects_invalid_neighborhood_zoning_shape():
+    with pytest.raises(ScenarioError, match="neighborhood central zoning must be an object"):
+        city_from_mapping({"neighborhoods": {"central": {"zoning": ["residential"]}}})
+
+
+def test_city_from_mapping_rejects_invalid_neighborhood_zoning_arrays():
+    with pytest.raises(ScenarioError, match="allowed_uses must be an array"):
+        city_from_mapping(
+            {
+                "neighborhoods": {
+                    "central": {
+                        "zoning": {
+                            "allowed_uses": "residential",
+                        }
+                    }
+                }
+            }
+        )
+
+
 def test_city_from_mapping_reads_place_assets_and_embedded_services():
     city = city_from_mapping(
         {
@@ -485,6 +561,12 @@ def test_save_city_round_trips_named_city(tmp_path, monkeypatch):
                 "central": {
                     "housing_stock": {"rowhouse_units": 22},
                     "adjacent_sectors": ["government_center"],
+                    "zoning": {
+                        "allowed_uses": ["residential", "civic"],
+                        "overlay_tags": ["historic_preservation"],
+                        "max_housing_units": 900,
+                        "historic_preservation_score": 0.65,
+                    },
                     "place_assets": [
                         {
                             "name": "Central School",
@@ -513,6 +595,17 @@ def test_save_city_round_trips_named_city(tmp_path, monkeypatch):
     assert load_city("roundtrip").pending_effects[0].target == "infrastructure_backlog"
     assert load_city("roundtrip").pending_effects[0].tags == ("grid", "capital_repair")
     assert load_city("roundtrip").neighborhoods["central"].housing_stock.rowhouse_units == 22
+    assert load_city("roundtrip").neighborhoods["central"].zoning.allowed_uses == (
+        "residential",
+        "civic",
+    )
+    assert load_city("roundtrip").neighborhoods["central"].zoning.overlay_tags == (
+        "historic_preservation",
+    )
+    assert (
+        load_city("roundtrip").neighborhoods["central"].zoning.historic_preservation_score
+        == pytest.approx(0.65)
+    )
     assert load_city("roundtrip").place_assets[0].service_capacity("healthcare") == 80
     assert (
         load_city("roundtrip")

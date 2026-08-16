@@ -24,6 +24,7 @@ from city_simulator.model import (
     PlaceAsset,
     PressureLedger,
     YearResult,
+    ZoningEnvelope,
     active_delayed_effects,
     simulate,
 )
@@ -52,6 +53,7 @@ __all__ = [
     "PressureLedger",
     "ScenarioError",
     "YearResult",
+    "ZoningEnvelope",
     "active_delayed_effects",
     "advance_citizen_histories",
     "generate_representative_citizens",
