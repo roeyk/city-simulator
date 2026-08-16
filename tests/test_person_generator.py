@@ -1,10 +1,14 @@
 from city_simulator import (
     FamilyGenerationSpec,
+    college_program_for,
+    college_program_weight,
+    college_programs_for_credential,
     eligible_job_template_for,
     generate_family_agents,
     generate_family_population,
     job_template_for,
     trade_school_program_for,
+    weighted_college_program_for,
 )
 
 
@@ -241,6 +245,53 @@ def test_trade_school_program_catalog_includes_core_choices():
         "air conditioning",
         "refrigeration",
     )
+
+
+def test_college_program_catalog_includes_cip_backed_disciplines():
+    programs = [college_program_for(index) for index in range(10)]
+
+    assert [program.major for program in programs[:5]] == [
+        "business administration",
+        "accounting",
+        "finance",
+        "public administration",
+        "law",
+    ]
+    assert {program.discipline for program in programs} >= {
+        "business",
+        "public affairs",
+        "legal studies",
+        "public safety",
+        "education",
+        "health professions",
+        "computer and information sciences",
+    }
+
+
+def test_college_programs_can_be_filtered_by_credential_level():
+    masters_programs = college_programs_for_credential("masters")
+    doctorate_programs = college_programs_for_credential("doctorate")
+
+    assert "business administration" in {program.major for program in masters_programs}
+    assert "nursing" in {program.major for program in masters_programs}
+    assert "law" not in {program.major for program in masters_programs}
+    assert "computer science" in {program.major for program in doctorate_programs}
+
+
+def test_college_program_weights_make_major_selection_non_uniform():
+    business = college_program_for(0)
+    history = next(
+        program for program in college_programs_for_credential("bachelors")
+        if program.major == "history"
+    )
+
+    assert college_program_weight(business, "bachelors") > college_program_weight(
+        history,
+        "bachelors",
+    )
+    assert weighted_college_program_for("bachelors", 0).discipline == "business"
+    assert weighted_college_program_for("masters", 0).discipline == "business"
+    assert weighted_college_program_for("doctorate", 0).discipline == "health professions"
 
 
 def test_generate_family_agents_creates_organizations_for_business_owners():

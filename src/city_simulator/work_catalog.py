@@ -40,6 +40,15 @@ class TradeSchoolProgram:
     prepares_for_roles: tuple[str, ...] = ()
 
 
+@dataclass(frozen=True)
+class CollegeProgram:
+    major: str
+    discipline: str
+    credential_levels: tuple[str, ...] = ("bachelors",)
+    typical_skills: tuple[str, ...] = ()
+    prepares_for_roles: tuple[str, ...] = ()
+
+
 CITY_SERVICE_JOBS: tuple[JobTemplate, ...] = (
     JobTemplate(
         role="firefighter",
@@ -126,6 +135,275 @@ GOVERNMENT_JOBS: tuple[JobTemplate, ...] = (
         organization_type="government",
     ),
 )
+
+
+COLLEGE_PROGRAMS: tuple[CollegeProgram, ...] = (
+    CollegeProgram(
+        major="business administration",
+        discipline="business",
+        credential_levels=("bachelors", "masters", "doctorate"),
+        typical_skills=("management", "accounting", "operations"),
+        prepares_for_roles=("business manager", "business owner", "operations analyst"),
+    ),
+    CollegeProgram(
+        major="accounting",
+        discipline="business",
+        credential_levels=("bachelors", "masters"),
+        typical_skills=("bookkeeping", "tax accounting", "audit preparation"),
+        prepares_for_roles=("accountant", "bookkeeper", "financial controller"),
+    ),
+    CollegeProgram(
+        major="finance",
+        discipline="business",
+        credential_levels=("bachelors", "masters", "doctorate"),
+        typical_skills=("financial analysis", "portfolio analysis", "risk assessment"),
+        prepares_for_roles=("financial analyst", "bank manager", "investment analyst"),
+    ),
+    CollegeProgram(
+        major="public administration",
+        discipline="public affairs",
+        credential_levels=("bachelors", "masters", "doctorate"),
+        typical_skills=("policy analysis", "budgeting", "public management"),
+        prepares_for_roles=("city administrator", "agency manager", "policy analyst"),
+    ),
+    CollegeProgram(
+        major="law",
+        discipline="legal studies",
+        credential_levels=("professional_doctorate",),
+        typical_skills=("legal research", "litigation", "statutory analysis"),
+        prepares_for_roles=("attorney", "judge", "legal counsel"),
+    ),
+    CollegeProgram(
+        major="criminal justice",
+        discipline="public safety",
+        credential_levels=("associate", "bachelors", "masters"),
+        typical_skills=("case analysis", "public safety policy", "investigation"),
+        prepares_for_roles=("police officer", "probation officer", "public safety analyst"),
+    ),
+    CollegeProgram(
+        major="education",
+        discipline="education",
+        credential_levels=("bachelors", "masters", "doctorate"),
+        typical_skills=("instruction", "curriculum design", "student assessment"),
+        prepares_for_roles=("teacher", "school administrator", "curriculum specialist"),
+    ),
+    CollegeProgram(
+        major="nursing",
+        discipline="health professions",
+        credential_levels=("associate", "bachelors", "masters", "doctorate"),
+        typical_skills=("patient care", "clinical assessment", "care coordination"),
+        prepares_for_roles=("registered nurse", "nurse practitioner", "nurse manager"),
+    ),
+    CollegeProgram(
+        major="public health",
+        discipline="health professions",
+        credential_levels=("bachelors", "masters", "doctorate"),
+        typical_skills=("epidemiology", "program evaluation", "health policy"),
+        prepares_for_roles=("public health analyst", "health program manager"),
+    ),
+    CollegeProgram(
+        major="computer science",
+        discipline="computer and information sciences",
+        credential_levels=("bachelors", "masters", "doctorate"),
+        typical_skills=("programming", "algorithms", "software design"),
+        prepares_for_roles=("software developer", "systems analyst", "data engineer"),
+    ),
+    CollegeProgram(
+        major="information technology",
+        discipline="computer and information sciences",
+        credential_levels=("associate", "bachelors", "masters"),
+        typical_skills=("network administration", "systems support", "cybersecurity"),
+        prepares_for_roles=("IT specialist", "network administrator", "security analyst"),
+    ),
+    CollegeProgram(
+        major="data science",
+        discipline="computer and information sciences",
+        credential_levels=("bachelors", "masters", "doctorate"),
+        typical_skills=("statistics", "machine learning", "data visualization"),
+        prepares_for_roles=("data analyst", "data scientist", "research analyst"),
+    ),
+    CollegeProgram(
+        major="civil engineering",
+        discipline="engineering",
+        credential_levels=("bachelors", "masters", "doctorate"),
+        typical_skills=("structural analysis", "infrastructure design", "project review"),
+        prepares_for_roles=("civil engineer", "public works engineer"),
+    ),
+    CollegeProgram(
+        major="electrical engineering",
+        discipline="engineering",
+        credential_levels=("bachelors", "masters", "doctorate"),
+        typical_skills=("circuit design", "power systems", "controls"),
+        prepares_for_roles=("electrical engineer", "utility engineer"),
+    ),
+    CollegeProgram(
+        major="architecture",
+        discipline="architecture",
+        credential_levels=("bachelors", "masters", "doctorate"),
+        typical_skills=("building design", "site planning", "construction documents"),
+        prepares_for_roles=("architect", "design consultant"),
+    ),
+    CollegeProgram(
+        major="urban planning",
+        discipline="architecture and planning",
+        credential_levels=("bachelors", "masters", "doctorate"),
+        typical_skills=("zoning analysis", "land use planning", "community engagement"),
+        prepares_for_roles=("urban planner", "zoning analyst"),
+    ),
+    CollegeProgram(
+        major="environmental science",
+        discipline="natural resources and conservation",
+        credential_levels=("bachelors", "masters", "doctorate"),
+        typical_skills=("field sampling", "environmental review", "risk assessment"),
+        prepares_for_roles=("environmental scientist", "sustainability analyst"),
+    ),
+    CollegeProgram(
+        major="biology",
+        discipline="biological sciences",
+        credential_levels=("bachelors", "masters", "doctorate"),
+        typical_skills=("laboratory methods", "research design", "data analysis"),
+        prepares_for_roles=("lab technician", "research scientist"),
+    ),
+    CollegeProgram(
+        major="chemistry",
+        discipline="physical sciences",
+        credential_levels=("bachelors", "masters", "doctorate"),
+        typical_skills=("chemical analysis", "laboratory safety", "quality testing"),
+        prepares_for_roles=("chemist", "quality control analyst"),
+    ),
+    CollegeProgram(
+        major="mathematics",
+        discipline="mathematics and statistics",
+        credential_levels=("bachelors", "masters", "doctorate"),
+        typical_skills=("mathematical modeling", "proof", "quantitative analysis"),
+        prepares_for_roles=("quantitative analyst", "teacher", "researcher"),
+    ),
+    CollegeProgram(
+        major="economics",
+        discipline="social sciences",
+        credential_levels=("bachelors", "masters", "doctorate"),
+        typical_skills=("economic modeling", "forecasting", "policy evaluation"),
+        prepares_for_roles=("economist", "policy analyst", "market analyst"),
+    ),
+    CollegeProgram(
+        major="psychology",
+        discipline="psychology",
+        credential_levels=("bachelors", "masters", "doctorate"),
+        typical_skills=("behavioral assessment", "research methods", "counseling"),
+        prepares_for_roles=("counselor", "research assistant", "clinical psychologist"),
+    ),
+    CollegeProgram(
+        major="social work",
+        discipline="public and social services",
+        credential_levels=("bachelors", "masters", "doctorate"),
+        typical_skills=("case management", "client advocacy", "program coordination"),
+        prepares_for_roles=("social worker", "case manager", "program director"),
+    ),
+    CollegeProgram(
+        major="sociology",
+        discipline="social sciences",
+        credential_levels=("bachelors", "masters", "doctorate"),
+        typical_skills=("survey methods", "community analysis", "qualitative research"),
+        prepares_for_roles=("research analyst", "community program analyst"),
+    ),
+    CollegeProgram(
+        major="communications",
+        discipline="communication and journalism",
+        credential_levels=("bachelors", "masters", "doctorate"),
+        typical_skills=("public speaking", "media writing", "campaign planning"),
+        prepares_for_roles=("communications specialist", "public relations manager"),
+    ),
+    CollegeProgram(
+        major="journalism",
+        discipline="communication and journalism",
+        credential_levels=("bachelors", "masters"),
+        typical_skills=("reporting", "editing", "source development"),
+        prepares_for_roles=("journalist", "editor", "media producer"),
+    ),
+    CollegeProgram(
+        major="english",
+        discipline="english language and literature",
+        credential_levels=("bachelors", "masters", "doctorate"),
+        typical_skills=("writing", "editing", "literary analysis"),
+        prepares_for_roles=("writer", "editor", "teacher"),
+    ),
+    CollegeProgram(
+        major="history",
+        discipline="history",
+        credential_levels=("bachelors", "masters", "doctorate"),
+        typical_skills=("archival research", "historical analysis", "writing"),
+        prepares_for_roles=("historian", "teacher", "museum curator"),
+    ),
+    CollegeProgram(
+        major="fine arts",
+        discipline="visual and performing arts",
+        credential_levels=("bachelors", "masters", "doctorate"),
+        typical_skills=("studio practice", "design", "critique"),
+        prepares_for_roles=("artist", "designer", "arts educator"),
+    ),
+)
+
+
+COLLEGE_DISCIPLINE_WEIGHTS_BY_CREDENTIAL: dict[str, dict[str, float]] = {
+    "bachelors": {
+        "business": 19.0,
+        "health professions": 13.0,
+        "social sciences": 8.0,
+        "computer and information sciences": 6.0,
+        "engineering": 6.0,
+        "biological sciences": 6.0,
+        "psychology": 6.0,
+        "communication and journalism": 4.0,
+        "education": 4.0,
+        "visual and performing arts": 4.0,
+        "public safety": 3.0,
+        "english language and literature": 2.0,
+        "natural resources and conservation": 2.0,
+        "mathematics and statistics": 2.0,
+        "history": 1.0,
+        "architecture": 1.0,
+        "architecture and planning": 1.0,
+        "physical sciences": 1.0,
+        "public affairs": 1.0,
+        "public and social services": 1.0,
+    },
+    "masters": {
+        "business": 24.0,
+        "education": 18.0,
+        "health professions": 16.0,
+        "public affairs": 6.0,
+        "computer and information sciences": 5.0,
+        "engineering": 5.0,
+        "public and social services": 5.0,
+        "psychology": 4.0,
+        "social sciences": 3.0,
+        "architecture and planning": 2.0,
+        "communication and journalism": 2.0,
+        "natural resources and conservation": 1.0,
+        "mathematics and statistics": 1.0,
+        "visual and performing arts": 1.0,
+    },
+    "doctorate": {
+        "health professions": 38.0,
+        "legal studies": 14.0,
+        "education": 9.0,
+        "engineering": 7.0,
+        "biological sciences": 6.0,
+        "psychology": 5.0,
+        "physical sciences": 3.0,
+        "business": 3.0,
+        "computer and information sciences": 3.0,
+        "social sciences": 3.0,
+        "mathematics and statistics": 2.0,
+        "public affairs": 1.0,
+    },
+    "professional_doctorate": {
+        "legal studies": 45.0,
+        "health professions": 45.0,
+        "business": 2.0,
+        "education": 2.0,
+    },
+}
 
 
 TRADE_SCHOOL_PROGRAMS: tuple[TradeSchoolProgram, ...] = (
@@ -414,6 +692,40 @@ def business_type_for(index: int) -> BusinessType:
 
 def trade_school_program_for(index: int) -> TradeSchoolProgram:
     return _pick(TRADE_SCHOOL_PROGRAMS, index)
+
+
+def college_program_for(index: int) -> CollegeProgram:
+    return _pick(COLLEGE_PROGRAMS, index)
+
+
+def college_programs_for_credential(credential_level: str) -> tuple[CollegeProgram, ...]:
+    return tuple(
+        program
+        for program in COLLEGE_PROGRAMS
+        if credential_level in program.credential_levels
+    )
+
+
+def college_program_weight(program: CollegeProgram, credential_level: str) -> float:
+    weights = COLLEGE_DISCIPLINE_WEIGHTS_BY_CREDENTIAL.get(credential_level, {})
+    return weights.get(program.discipline, 1.0)
+
+
+def weighted_college_program_for(
+    credential_level: str,
+    index: int,
+) -> CollegeProgram:
+    programs = college_programs_for_credential(credential_level)
+    if not programs:
+        raise ValueError(f"unknown or unsupported credential level {credential_level!r}")
+    weighted: list[CollegeProgram] = []
+    for program in sorted(
+        programs,
+        key=lambda value: college_program_weight(value, credential_level),
+        reverse=True,
+    ):
+        weighted.extend([program] * max(round(college_program_weight(program, credential_level)), 1))
+    return _pick(tuple(weighted), index)
 
 
 def _pick(values: tuple[T, ...], index: int) -> T:

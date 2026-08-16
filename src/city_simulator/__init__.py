@@ -54,12 +54,17 @@ from city_simulator.starter import STARTER_PRESETS, starter_city, write_starter_
 from city_simulator.views import PopulationStructureView, View
 from city_simulator.work_catalog import (
     BusinessType,
+    CollegeProgram,
     JobTemplate,
     TradeSchoolProgram,
     business_type_for,
+    college_program_for,
+    college_program_weight,
+    college_programs_for_credential,
     eligible_job_template_for,
     job_template_for,
     trade_school_program_for,
+    weighted_college_program_for,
 )
 
 __all__ = [
@@ -74,6 +79,7 @@ __all__ = [
     "CityRevenueSources",
     "CitySensitivity",
     "CityState",
+    "CollegeProgram",
     "CulturalIdentity",
     "DelayedEffect",
     "Demographics",
@@ -107,6 +113,9 @@ __all__ = [
     "active_delayed_effects",
     "advance_citizen_histories",
     "business_type_for",
+    "college_program_for",
+    "college_program_weight",
+    "college_programs_for_credential",
     "eligible_job_template_for",
     "generate_family_agents",
     "generate_family_population",
@@ -118,5 +127,6 @@ __all__ = [
     "simulate",
     "starter_city",
     "trade_school_program_for",
+    "weighted_college_program_for",
     "write_starter_city",
 ]
