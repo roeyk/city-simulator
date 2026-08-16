@@ -1,0 +1,170 @@
+from __future__ import annotations
+
+from city_simulator.derived import _active_effect_amount, _density, _service_coverage
+from city_simulator.state import CityPolicy, CityState, DelayedEffect, PressureLedger
+
+
+def _seasonal_pressure_ledger(
+    state: CityState,
+    policy: CityPolicy,
+    infrastructure: float,
+    pollution: float,
+) -> PressureLedger:
+    ledger = PressureLedger()
+    heat_exposure = _summer_heat_exposure(state, pollution)
+    if heat_exposure <= 0:
+        return ledger
+
+    seniors_share = state.demographics.seniors / max(state.population, 1.0)
+    cooling_demand = heat_exposure * (1.0 + seniors_share * 1.8) * state.population / 100_000
+    grid_resilience = _grid_resilience(state, infrastructure)
+    grid_shortfall = max(cooling_demand - grid_resilience, 0.0)
+    healthcare_surge = _healthcare_surge(
+        state=state,
+        heat_exposure=heat_exposure,
+        grid_shortfall=grid_shortfall,
+    )
+    civic_trust_risk = grid_shortfall * 0.4 + healthcare_surge * 0.35
+    mitigation = policy.environment_investment / 80_000_000
+
+    ledger.add(
+        "summer_heat_exposure",
+        heat_exposure,
+        "Summer heat exposure comes from climate profile, pollution, density, and active heat effects.",
+    )
+    ledger.add(
+        "cooling_demand",
+        cooling_demand,
+        "Cooling demand increases with heat exposure, population, and senior vulnerability.",
+    )
+    ledger.add(
+        "grid_shortfall",
+        max(grid_shortfall - mitigation, 0.0),
+        "Cooling demand exceeds grid resilience after policy mitigation.",
+    )
+    ledger.add(
+        "healthcare_surge",
+        healthcare_surge,
+        "Heat exposure and grid shortfall increase EMS and hospital load.",
+    )
+    ledger.add(
+        "civic_trust_risk",
+        max(civic_trust_risk - mitigation, 0.0),
+        "Visible outages and health-system stress create civic trust risk.",
+    )
+    return ledger
+
+
+def _summer_heat_exposure(state: CityState, pollution: float) -> float:
+    climate_heat = _profile_value(state.physical_profile, ("seasonal_exposure", "summer_heat"))
+    climate_heat += _profile_value(state.physical_profile, ("climate", "summer_heat"))
+    neighborhood_heat = _neighborhood_exposure(state, "summer_heat")
+    density_heat = max(_density(state.population, state) - 2_500, 0.0) / 900
+    pollution_heat = max(pollution - 50.0, 0.0) * 0.22
+    pending_heat = _active_effect_amount(state, "heat_exposure")
+    return max(climate_heat + neighborhood_heat + density_heat + pollution_heat + pending_heat, 0.0)
+
+
+def _profile_value(profile: dict[str, dict[str, float] | float], path: tuple[str, str]) -> float:
+    section = profile.get(path[0])
+    if isinstance(section, dict):
+        value = section.get(path[1], 0.0)
+        return float(value) if isinstance(value, int | float) else 0.0
+    return 0.0
+
+
+def _neighborhood_exposure(state: CityState, key: str) -> float:
+    if not state.neighborhoods:
+        return 0.0
+    population_weighted = 0.0
+    total_population = 0.0
+    for neighborhood in state.neighborhoods.values():
+        exposure = neighborhood.environmental_exposure.get(key, 0.0)
+        if not isinstance(exposure, int | float):
+            continue
+        weight = max(neighborhood.population, 0.0)
+        population_weighted += exposure * weight
+        total_population += weight
+    if total_population <= 0:
+        exposures = [
+            exposure
+            for neighborhood in state.neighborhoods.values()
+            if isinstance((exposure := neighborhood.environmental_exposure.get(key, 0.0)), int | float)
+        ]
+        return sum(exposures) / max(len(exposures), 1)
+    return population_weighted / total_population
+
+
+def _grid_resilience(state: CityState, infrastructure: float) -> float:
+    grid_capacity = (
+        state.service_capacity("electric_grid")
+        + state.service_capacity("power")
+        + state.service_capacity("utility_power")
+    )
+    capacity_bonus = grid_capacity / max(state.population / 10_000, 1.0) * 0.6
+    repair_backlog = max(_active_effect_amount(state, "infrastructure_backlog"), 0.0)
+    backlog_drag = repair_backlog / 5_000_000
+    return max(infrastructure / 8 + capacity_bonus - backlog_drag, 0.0)
+
+
+def _healthcare_surge(
+    state: CityState,
+    heat_exposure: float,
+    grid_shortfall: float,
+) -> float:
+    healthcare_capacity = (
+        state.service_capacity("healthcare")
+        + state.service_capacity("emergency_care")
+        + state.service_capacity("hospital")
+        + state.service_capacity("clinic")
+    )
+    if healthcare_capacity <= 0:
+        healthcare_capacity = state.population / 2_000 * _service_coverage(state) / 100
+    capacity_buffer = healthcare_capacity / max(state.population / 10_000, 1.0) / 5
+    delayed_surge = max(_active_effect_amount(state, "healthcare_surge"), 0.0)
+    return max(heat_exposure * 0.35 + grid_shortfall * 0.65 + delayed_surge - capacity_buffer, 0.0)
+
+
+def _delayed_effects_from_pressures(ledger: PressureLedger) -> tuple[DelayedEffect, ...]:
+    effects: list[DelayedEffect] = []
+    grid_shortfall = ledger.get("grid_shortfall")
+    healthcare_surge = ledger.get("healthcare_surge")
+    civic_trust_risk = ledger.get("civic_trust_risk")
+    if grid_shortfall >= 5.0:
+        effects.append(
+            DelayedEffect(
+                source="seasonal_heat_cascade",
+                target="infrastructure_backlog",
+                amount=grid_shortfall * 750_000,
+                duration_turns=3,
+                decay_rate=0.35,
+                tags=("heat", "grid", "repair_backlog"),
+                explanation="Summer cooling demand created grid repair backlog.",
+            )
+        )
+    if healthcare_surge >= 5.0:
+        effects.append(
+            DelayedEffect(
+                source="seasonal_heat_cascade",
+                target="healthcare_surge",
+                amount=healthcare_surge,
+                duration_turns=2,
+                decay_rate=0.45,
+                tags=("heat", "healthcare", "ems"),
+                explanation="Heat exposure and outages created lingering healthcare load.",
+            )
+        )
+    if civic_trust_risk >= 4.0:
+        effects.append(
+            DelayedEffect(
+                source="seasonal_heat_cascade",
+                target="civic_trust",
+                amount=-civic_trust_risk,
+                delay_turns=1,
+                duration_turns=3,
+                decay_rate=0.4,
+                tags=("heat", "grid", "public_trust"),
+                explanation="Outages and visible heat-health strain damaged confidence in city response.",
+            )
+        )
+    return tuple(effects)

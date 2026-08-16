@@ -5,6 +5,11 @@ Last updated: 2026-08-15
 City Simulator advances in yearly turns. A turn should be understandable as a
 sequence of civic changes, not a black-box formula.
 
+The yearly turn is the public resolution for scenario comparison, but it does
+not require every cause to be averaged into one annual value. A turn can contain
+representative seasonal periods and bounded feedback passes before committing
+the next yearly state.
+
 ## Turn Inputs
 
 Each turn starts from:
@@ -51,7 +56,10 @@ Each turn starts from:
 
    Transit and services improve infrastructure while annual wear lowers it.
    Population and job growth add pollution pressure. City environment spending
-   and state environmental mandates reduce pollution.
+   and state environmental mandates reduce pollution. Seasonal pressures such
+   as heat, snow, storms, drought, flooding, smoke, pests, or allergy seasons
+   should be represented as sub-annual exposure profiles that roll into the
+   yearly result.
 
 6. Satisfaction and migration
 
@@ -75,7 +83,10 @@ Each turn starts from:
 9. Issues and resolutions
 
    The simulator detects active issues from the new city state and compares them
-   with the previous year's issues to identify what was overcome.
+   with the previous year's issues to identify what was overcome. If an
+   internal feedback loop does not stabilize within the annual turn's capped
+   feedback passes, the unresolved cascade should become an active issue or
+   model warning rather than being silently hidden.
 
 10. Citizen histories
 
@@ -91,12 +102,105 @@ Each turn starts from:
    growth rate, labor force, resident employment, unemployment, job vacancies,
    commuters, housing pressure, density, and service coverage.
 
+## Internal Turn Resolution
+
+The current game turn is one year. Inside that year, the simulator may evaluate
+representative sub-periods such as winter, spring, summer, fall, weekday peaks,
+weekends, nighttime operations, school terms, event seasons, or emergency
+periods. These internal periods are not player-visible turns yet; they are a
+way to preserve timing and seasonality while keeping annual scenario comparison
+simple.
+
+Seasonal climate should be modeled this way. For example, a severe summer heat
+profile can increase air-conditioning demand, stress the electric grid, create
+brownouts, increase heat illness among seniors or other vulnerable groups,
+raise EMS and hospital load, damage public trust, and increase political unrest.
+The annual result should report the causal chain rather than only showing a
+generic decline in satisfaction.
+
+Some systems also need feedback. A simple one-pass sequence such as
+`climate -> grid -> health -> unrest` can miss knock-on effects where later
+layers affect earlier capacities. For example, unrest may slow emergency
+operations, stress staffing, disrupt communication, or delay cooling-center and
+grid response, which then worsens unresolved heat exposure.
+
+To handle this without switching to hourly simulation, an annual turn can use
+bounded feedback passes:
+
+```text
+annual turn
+  build outside, policy, seasonal, and schedule pressures
+  evaluate representative periods
+  run causal layers once
+  feed selected feedback signals into dependent layers
+  repeat until stable or until a small fixed pass limit is reached
+  commit the yearly state and report the causal chain
+```
+
+Feedback signals should be named intermediate values, not hidden side effects.
+Examples include grid shortfall, blackout hours, healthcare surge, excess
+deaths, civic trust loss, unrest pressure, emergency response delay, staffing
+disruption, business interruption, service backlog, and communication failure.
+The current source implementation exposes these in-turn intermediates through a
+`PressureLedger` on `YearResult`. The first implemented slice derives a severe
+summer heat cascade from heat exposure, cooling demand, grid shortfall,
+healthcare surge, and civic trust risk.
+Signals that should persist beyond the current turn can become
+`DelayedEffect` records on `CityState.pending_effects`. A delayed effect stores
+its source, target channel, amount, delay, duration, decay, tags, and
+explanation. This is the carry-forward layer for impacts that mature over
+several turns, such as trust damage after blackouts, infrastructure repair
+backlogs, legal-aid backlog, chronic health load, or long-tail business
+disruption.
+
+Use delayed effects for intermediate channels, not as shortcuts directly to
+final headline metrics. For example:
+
+```text
+good: summer_blackout -> civic_trust / healthcare_surge / repair_backlog
+bad:  summer_blackout -> happiness -10
+```
+
+If the feedback pass does not stabilize, distinguish two cases:
+
+- civic instability: a plausible cascading failure, such as heat, grid
+  shortfall, hospital overload, trust collapse, unrest, and delayed response
+  reinforcing each other;
+- model instability: coefficients or formulas are too sensitive, missing
+  damping, or exceeding plausible bounds.
+
+Civic instability should produce active issues, severity, amplifying factors,
+missing buffers, and report text. Model instability should produce a warning
+for calibration review.
+
+Shorter turns can be added later, such as monthly or quarterly turns, when
+mid-year intervention timing becomes important. Shorter turns improve timing
+but do not remove the need for feedback modeling: even a monthly turn can
+contain daily or hourly crisis dynamics. Keep the feedback machinery explicit
+and keep annual scenario reports as a supported output.
+
 ## Design Rules
 
 - Keep turns deterministic by default.
 - Keep phase effects traceable to policy or outside pressure.
 - Prefer adding named intermediate values over hiding behavior in one large
   expression.
+- Preserve feedback loops explicitly. When one layer can affect an earlier
+  capacity or a later layer through a knock-on effect, pass a named feedback
+  signal through bounded internal passes instead of assuming a single yearly
+  ordering captures the whole chain.
+- Carry delayed state explicitly. When an effect should mature later or persist
+  across turns, store it as a delayed effect with source, target, timing,
+  decay, tags, and explanation.
+- Mark variables by provenance:
+  - source state / canonical state: authoritative simulated facts;
+  - scenario input, policy control, and external pressure: values supplied to a
+    run;
+  - model parameter: tunable formula coefficient;
+  - computed intermediate: temporary value inside a turn;
+  - derived rollup: value recomputed from lower-level state;
+  - cached metric: derived value stored for reporting or compatibility;
+  - report-only output: value emitted in a `YearResult`.
 - Treat hard-coded formula weights as scaffolding. As mechanics stabilize,
   promote important weights into named model parameters; when appropriate, let
   those parameters become dynamic city traits that change across turns in
@@ -113,9 +217,27 @@ Each turn starts from:
 - Use shared place assets for physical or institutional locations that can host
   services. A place asset can represent a school, clinic, hospital, mall,
   mixed-use building, police station, fire station, public works depot, transit
-  hub, assisted-living residence, or congregation. Embedded services let one
-  place provide several capacities, such as education, healthcare, therapy,
-  retail, recreation, worship, safety response, or public works access.
+  hub, assisted-living residence, congregation, museum, monument, or historic
+  site, bank, federal credit union, lending office, public finance office, or
+  exchange-market access institution. Embedded services let one place provide
+  several capacities, such as education, healthcare, therapy, retail,
+  recreation, exhibitions, visitor services, worship, safety response, public
+  works access, household credit, business lending, municipal finance, or
+  energy-market access.
+- Financial institution profiles should distinguish the institution from the
+  market it touches. For example, an energy derivatives exchange can give
+  energy suppliers, county distributors, large energy consumers such as
+  datacenters, and speculators access to power, natural-gas, or environmental
+  contracts for price, credit, liquidity, and basis-risk management. The
+  simulator should model those participant roles and asset classes without
+  treating the exchange as a power plant, physical dispatch system, or generic
+  bank.
+- Let places and embedded services carry operating schedules. Keep them as
+  deterministic annualized profiles for now: business-hours shops, daytime
+  weekday school terms, evening adult education, nightlife, overnight public
+  works such as street cleaning, seasonal recreation, event-only venues,
+  emergency/on-call services, and 24x7 facilities should all be representable
+  without simulating every hour.
 - Treat housing stock and housing assistance as separate concepts. Physical
   stock includes residence types such as estate homes, rowhouses, mixed-use
   shopfront housing, garden apartments, and high-rises. Assistance includes
@@ -125,11 +247,19 @@ Each turn starts from:
   existing stock, temporary displacement, replacement units, added density,
   construction disruption, political trust, and long-term capacity.
 - Treat top-level metrics as derived outputs. As the city and population model
-  becomes more detailed, statistics such as unemployment, happiness, public
-  sentiment, crime, housing stress, and economic confidence should be computed
-  from underlying household, business, labor, housing, service, and place data.
-  A starter city or wizard may accept an initial value such as 5% unemployment,
-  but after turns begin that value should be derived from the simulated city and
-  population data rather than carried forward as a manually controlled metric.
+  becomes more detailed, statistics such as population, unemployment, happiness,
+  public sentiment, crime, housing pressure, housing stress, and economic
+  confidence should be computed from underlying household, cohort, neighborhood,
+  business, labor, housing, service, and place data. A starter city or wizard
+  may accept initial values such as 100,000 residents or 5% unemployment, but
+  after turns begin those values should be derived from simulated lower-level
+  data rather than carried forward as manually controlled metrics.
+- `city.population` should eventually be a derived rollup/cache from
+  household/cohort and neighborhood residency data, not an independently
+  authoritative source field.
+- `city.metrics.housing_pressure` should be a derived metric from household
+  demand, household size, housing supply by type, vacancy, crowding,
+  rent/mortgage affordability, assistance utilization, housing condition,
+  displacement, and neighborhood distribution.
 - When adding a new scenario lever, decide which turn phase it affects.
 - When adding a new issue, decide which phase creates or resolves it.

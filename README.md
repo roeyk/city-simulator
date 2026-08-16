@@ -1,7 +1,14 @@
 # City Simulator
 
-A small, deterministic city simulator focused on manipulating statistics rather
-than rendering graphics.
+City Simulator is a deterministic, statistics-first civic systems simulator.
+It is a policy sandbox for defining a city, applying local policies and outside
+pressures, advancing time, and comparing how civic systems interact.
+
+The intended experience is a mayoral briefing backed by transparent numbers:
+not a graphics-first city builder, and not a raw spreadsheet. The simulator
+models causal chains and tradeoffs across population, neighborhoods, housing,
+jobs, businesses, services, infrastructure, transportation, environment,
+public safety, public sentiment, and city finances.
 
 See [GOALS.md](GOALS.md) for the project thesis: define a city, throw different
 policy and outside-pressure scenarios at it, and compare what happens.
@@ -16,6 +23,25 @@ Labor and sentiment metrics are derived from the city state: jobs in the city
 are distinct from resident employment, and public sentiment combines survey,
 migration, business, spending, savings, housing, safety, services, civic-trust,
 and future-confidence signals.
+
+## Where This Project Sits
+
+City Simulator sits between a compact AI crisis benchmark and a professional
+urban-planning model.
+
+At the small end, it is inspired by Pocket Providence-style settlement
+benchmarks: constrained resources, short crisis horizons, named or
+representative people, hard tradeoffs, ethics constraints, and postmortems that
+test whether an AI understands the consequences of its decisions.
+
+At the large end, it borrows the scenario-comparison mindset of systems such as
+UrbanSim: policy levers, households, jobs, development, infrastructure,
+regional pressures, path-dependent yearly changes, and transparent reports.
+
+It is not trying to be a full GIS, econometric land-use forecast, or official
+planning model. It is a deterministic civic-systems sandbox for exploring
+causal chains: broad enough to model interacting city systems, but small enough
+for a person or AI agent to inspect, reason about, and explain.
 
 ## Run
 
@@ -112,6 +138,11 @@ The table view is a mayor-style annual summary:
 - active issues;
 - issues overcome this year.
 
+When comparing multiple scenarios, the table is followed by a short scenario
+briefing. The briefing summarizes population movement, major causal drivers,
+pressure signals, active issues, and any overcome issues so the comparison
+explains why outcomes diverged.
+
 Use JSON output when you want the full state and issue history for a later UI or
 scenario comparison.
 
@@ -170,13 +201,44 @@ ordinary housing units.
 City and neighborhood files can also include `place_assets`. A place asset is a
 topological civic or economic place such as a school, clinic, hospital, mall,
 mixed-use building, police station, fire station, public works depot, transit
-hub, assisted-living residence, or congregation. Place assets can embed
-`services`, so one building can carry several usable capacities: for example a
-school can include education seats, counseling, a clinic, and recreation
-programs; a mixed-use building can include housing-adjacent retail; an assisted
-living residence can include occupational therapy. The model tracks capacity,
-jobs, condition, access, service area, tags, and per-service quality/access/trust
-without requiring coordinates or map geometry.
+hub, assisted-living residence, congregation, museum, monument, or historic
+site. Place assets can embed `services`, so one building can carry several
+usable capacities: for example a school can include daytime education seats,
+counseling, a clinic, and recreation programs; a mixed-use building can include
+housing-adjacent retail; an assisted living residence can include occupational
+therapy; a museum can include exhibitions, school programs, archives, events,
+and visitor services. The model tracks capacity, jobs, condition, access,
+service area, tags, operating schedule, and per-service
+quality/access/trust/schedule without requiring coordinates or map geometry.
+Schedules are annualized profiles rather than real-time simulation. They can
+describe business hours, daytime school terms, nightlife, overnight public
+works such as street cleaning, seasonal services, event-only uses, emergency
+on-call coverage, or 24x7 operations.
+
+Financial places can include a `financial_profile`. This lets the same place
+model represent banks, federal credit unions, lending institutions, public
+finance offices, and exchange-market access institutions. Profiles can track
+market roles, participant roles, asset classes, deposit capacity, lending
+capacity, municipal finance capacity, household/business access, liquidity, and
+risk. For example, an energy exchange market can represent derivatives-market
+access for power suppliers such as nuclear or solar generators, county
+distributors, large energy consumers such as giga-class datacenters, and
+speculators to manage price, credit, liquidity, and basis risk. This is market
+risk access, not physical energy dispatch.
+
+City files can include `pending_effects` to carry delayed or persistent impacts
+between turns. A delayed effect records a source, target channel, amount,
+turn-delay, duration, decay rate, tags, and explanation. This lets a crisis
+create lagged effects such as civic-trust damage, healthcare surge,
+infrastructure backlog, legal-aid backlog, or business disruption without
+pretending every consequence happens in the same turn.
+
+Annual reports can also include a `pressure_ledger` with named in-turn signals.
+The first implemented pressure slice models severe summer heat as
+`summer_heat_exposure`, `cooling_demand`, `grid_shortfall`,
+`healthcare_surge`, and `civic_trust_risk`. Severe pressure can create delayed
+effects such as repair backlog, lingering healthcare load, and later civic
+trust loss.
 
 Scenario files can include:
 

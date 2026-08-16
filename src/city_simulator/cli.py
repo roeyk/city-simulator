@@ -2,13 +2,39 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections.abc import Sequence
 from dataclasses import asdict
+from typing import TypedDict
 
-from city_simulator.citizens import advance_citizen_histories, generate_representative_citizens
-from city_simulator.model import CityPolicy, CityState, ExternalControls, simulate
+from city_simulator.citizens import (
+    Citizen,
+    advance_citizen_histories,
+    generate_representative_citizens,
+)
+from city_simulator.model import (
+    CityPolicy,
+    CityState,
+    ExternalControls,
+    Issue,
+    YearResult,
+    simulate,
+)
 from city_simulator.scenario import ScenarioError, load_city, load_scenario, save_city
-from city_simulator.starter import STARTER_PRESETS, prompt_for_starter_city, write_starter_city
+from city_simulator.starter import (
+    STARTER_PRESETS,
+    prompt_for_starter_city,
+    write_starter_city,
+)
 from city_simulator.storage import city_path, ensure_data_dirs, saved_cities
+
+
+class SimulationReport(TypedDict):
+    name: str
+    years: int
+    policy: CityPolicy
+    external: ExternalControls
+    results: list[YearResult]
+    citizens: list[Citizen]
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -92,10 +118,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"city-simulator: {exc}")
         return 2
 
-    reports = [
+    reports: list[SimulationReport] = [
         {
             "name": name,
             "years": years,
+            "policy": policy,
+            "external": external,
             "results": simulate(initial_state, policy, years, external),
             "citizens": [],
         }
@@ -154,7 +182,7 @@ def _play(args: argparse.Namespace, input_func=None, output_func=print) -> int:
         if raw in {"status", "s"}:
             output_func(_format_state_status(state))
             continue
-        if raw.startswith("turn") or raw.startswith("next") or raw == "":
+        if raw.startswith(("turn", "next")) or raw == "":
             count = _turn_count(raw)
             for _ in range(count):
                 result = simulate(state, policy, 1, external)[0]
@@ -246,7 +274,7 @@ def _build_runs(args: argparse.Namespace) -> list[tuple[str, CityPolicy, Externa
     ]
 
 
-def _format_table(results: list[object]) -> str:
+def _format_table(results: Sequence[YearResult]) -> str:
     headers = (
         "Year",
         "Population",
@@ -292,13 +320,13 @@ def _format_table(results: list[object]) -> str:
     return "\n".join(lines)
 
 
-def _issue_names(issues: list[object]) -> str:
+def _issue_names(issues: Sequence[Issue]) -> str:
     if not issues:
         return "none"
     return ", ".join(issue.name for issue in issues)
 
 
-def _format_comparison(reports: list[dict[str, object]]) -> str:
+def _format_comparison(reports: list[SimulationReport]) -> str:
     headers = (
         "Scenario",
         "Years",
@@ -341,10 +369,117 @@ def _format_comparison(reports: list[dict[str, object]]) -> str:
         "  ".join(value.rjust(widths[index]) for index, value in enumerate(row))
         for row in rows
     )
+    lines.append("")
+    lines.extend(_format_comparison_briefing(reports))
     return "\n".join(lines)
 
 
-def _all_overcome_issue_names(results: list[object]) -> list[str]:
+def _format_comparison_briefing(reports: list[SimulationReport]) -> list[str]:
+    lines = ["Scenario Briefing"]
+    for report in reports:
+        lines.append(f"{report['name']}:")
+        for note in _scenario_briefing_notes(report):
+            lines.append(f"- {note}")
+    return lines
+
+
+def _scenario_briefing_notes(report: SimulationReport) -> list[str]:
+    results = report["results"]
+    if not results:
+        return ["No simulated years were run."]
+
+    final = results[-1]
+    population_change = sum(result.population_delta for result in results)
+    job_change = sum(result.jobs_delta for result in results)
+    notes = [
+        (
+            f"Population {_change_word(population_change)} {abs(population_change):,.0f} "
+            f"over {len(results)} years; final-year growth was "
+            f"{final.state.metrics.growth_rate:.2%}."
+        )
+    ]
+
+    causes = _scenario_cause_notes(report, final, job_change)
+    if causes:
+        notes.append(f"Main causes: {'; '.join(causes)}.")
+
+    pressure_notes = _pressure_notes(results)
+    if pressure_notes:
+        notes.append(f"Pressure signals: {'; '.join(pressure_notes)}.")
+
+    if final.active_issues:
+        notes.append(f"Active issues: {_issue_names(final.active_issues)}.")
+    overcome = _all_overcome_issue_names(results)
+    if overcome:
+        notes.append(f"Overcame: {', '.join(overcome)}.")
+    return notes
+
+
+def _scenario_cause_notes(
+    report: SimulationReport,
+    final: YearResult,
+    job_change: float,
+) -> list[str]:
+    policy = report["policy"]
+    external = report["external"]
+    causes: list[str] = []
+    if final.housing_gap > final.state.population * 0.02:
+        causes.append(f"housing supply is short by {final.housing_gap:,.0f} homes")
+    elif final.housing_gap < 0:
+        causes.append("housing supply has slack for new residents")
+
+    if job_change > final.state.population * 0.005:
+        causes.append(f"business support and infrastructure expanded jobs by {job_change:,.0f}")
+    elif job_change < -final.state.population * 0.005:
+        causes.append(f"job base contracted by {abs(job_change):,.0f}")
+
+    if final.state.budget < 0:
+        causes.append(f"budget is ${abs(final.state.budget):,.0f} below balance")
+    if final.state.metrics.unemployment_rate > 0.08:
+        causes.append(f"unemployment is elevated at {final.state.metrics.unemployment_rate:.1%}")
+    if final.state.satisfaction < 50:
+        causes.append(f"resident satisfaction is weak at {final.state.satisfaction:.1f}/100")
+
+    restriction = policy.zoning_restrictiveness + policy.development_restriction
+    if restriction >= 0.9:
+        causes.append("local zoning and development restrictions deter migration")
+    if policy.permitting_speed >= 0.75 and policy.housing_investment >= 50_000_000:
+        causes.append("fast permitting made housing investment more effective")
+    if external.federal_growth_pressure > 0:
+        causes.append("federal growth pressure added migration demand")
+    if external.national_unemployment_pressure > 0:
+        causes.append("national unemployment pressure dragged on local jobs")
+    return causes[:4]
+
+
+def _pressure_notes(results: list[YearResult]) -> list[str]:
+    totals: dict[str, float] = {}
+    for result in results:
+        for channel, amount in result.pressure_ledger.signals.items():
+            totals[channel] = totals.get(channel, 0.0) + amount
+    labels = {
+        "summer_heat_exposure": "summer heat exposure",
+        "cooling_demand": "cooling demand",
+        "grid_shortfall": "grid shortfall",
+        "healthcare_surge": "healthcare surge",
+        "civic_trust_risk": "civic trust risk",
+    }
+    return [
+        f"{labels.get(channel, channel.replace('_', ' '))} {amount:.1f}"
+        for channel, amount in sorted(totals.items(), key=lambda item: abs(item[1]), reverse=True)
+        if abs(amount) >= 1.0
+    ][:3]
+
+
+def _change_word(amount: float) -> str:
+    if amount > 0:
+        return "gained"
+    if amount < 0:
+        return "lost"
+    return "changed by"
+
+
+def _all_overcome_issue_names(results: Sequence[YearResult]) -> list[str]:
     names: list[str] = []
     seen: set[str] = set()
     for result in results:
@@ -355,7 +490,7 @@ def _all_overcome_issue_names(results: list[object]) -> list[str]:
     return names
 
 
-def _reports_asdict(reports: list[dict[str, object]]) -> list[dict[str, object]]:
+def _reports_asdict(reports: list[SimulationReport]) -> list[dict[str, object]]:
     return [
         {
             "name": report["name"],
@@ -367,7 +502,7 @@ def _reports_asdict(reports: list[dict[str, object]]) -> list[dict[str, object]]
     ]
 
 
-def _format_citizens(citizens: list[object]) -> str:
+def _format_citizens(citizens: Sequence[Citizen]) -> str:
     lines = ["Citizen Stories"]
     for citizen in citizens:
         lines.append(
@@ -378,7 +513,7 @@ def _format_citizens(citizens: list[object]) -> str:
     return "\n".join(lines)
 
 
-def _format_comparison_citizens(reports: list[dict[str, object]]) -> str:
+def _format_comparison_citizens(reports: list[SimulationReport]) -> str:
     lines = ["Citizen Story Samples"]
     for report in reports:
         citizens = report["citizens"]

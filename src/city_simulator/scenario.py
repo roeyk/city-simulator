@@ -10,12 +10,15 @@ from city_simulator.model import (
     CityPolicy,
     CitySensitivity,
     CityState,
+    DelayedEffect,
     Demographics,
     EmbeddedService,
     ExternalControls,
+    FinancialInstitutionProfile,
     HousingAssistance,
     HousingStock,
     Neighborhood,
+    OperatingSchedule,
     PlaceAsset,
 )
 from city_simulator.storage import city_path, scenario_path
@@ -73,6 +76,9 @@ def city_from_mapping(data: dict[str, Any]) -> CityState:
     place_assets_data = data.get("place_assets", ())
     if not isinstance(place_assets_data, list | tuple):
         raise ScenarioError("city place_assets must be an array")
+    pending_effects_data = data.get("pending_effects", ())
+    if not isinstance(pending_effects_data, list | tuple):
+        raise ScenarioError("city pending_effects must be an array")
 
     demographics = _dataclass_from_mapping(
         Demographics,
@@ -113,6 +119,7 @@ def city_from_mapping(data: dict[str, Any]) -> CityState:
             "housing_assistance",
             "neighborhoods",
             "place_assets",
+            "pending_effects",
         }
     }
     return _dataclass_from_mapping(
@@ -126,6 +133,10 @@ def city_from_mapping(data: dict[str, Any]) -> CityState:
             "housing_assistance": housing_assistance,
             "neighborhoods": neighborhoods,
             "place_assets": place_assets,
+            "pending_effects": _delayed_effects_from_sequence(
+                pending_effects_data,
+                "city pending_effects",
+            ),
         },
         "city",
     )
@@ -204,10 +215,16 @@ def _place_assets_from_sequence(
         services_data = value.get("services", ())
         if not isinstance(services_data, list | tuple):
             raise ScenarioError(f"{item_label} services must be an array")
+        schedule_data = value.get("schedule", {})
+        if not isinstance(schedule_data, dict):
+            raise ScenarioError(f"{item_label} schedule must be an object")
+        financial_profile_data = value.get("financial_profile")
+        if financial_profile_data is not None and not isinstance(financial_profile_data, dict):
+            raise ScenarioError(f"{item_label} financial_profile must be an object")
         place_asset_data = {
             field_key: field_value
             for field_key, field_value in value.items()
-            if field_key != "services"
+            if field_key not in {"services", "schedule", "financial_profile"}
         }
         if default_neighborhood is not None and "neighborhood" not in place_asset_data:
             place_asset_data["neighborhood"] = default_neighborhood
@@ -217,10 +234,18 @@ def _place_assets_from_sequence(
                 PlaceAsset,
                 place_asset_data
                 | {
+                    "schedule": _operating_schedule_from_mapping(
+                        schedule_data,
+                        f"{item_label} schedule",
+                    ),
                     "services": _embedded_services_from_sequence(
                         services_data,
                         f"{item_label} services",
-                    )
+                    ),
+                    "financial_profile": _financial_profile_from_mapping(
+                        financial_profile_data,
+                        f"{item_label} financial_profile",
+                    ),
                 },
                 item_label,
             )
@@ -238,9 +263,56 @@ def _embedded_services_from_sequence(
         if not isinstance(value, dict):
             raise ScenarioError(f"{item_label} must be an object")
         service_data = dict(value)
+        schedule_data = service_data.pop("schedule", {})
+        if not isinstance(schedule_data, dict):
+            raise ScenarioError(f"{item_label} schedule must be an object")
         _tupleize(service_data, ("target_groups", "tags"))
-        services.append(_dataclass_from_mapping(EmbeddedService, service_data, item_label))
+        services.append(
+            _dataclass_from_mapping(
+                EmbeddedService,
+                service_data
+                | {
+                    "schedule": _operating_schedule_from_mapping(
+                        schedule_data,
+                        f"{item_label} schedule",
+                    )
+                },
+                item_label,
+            )
+        )
     return tuple(services)
+
+
+def _operating_schedule_from_mapping(data: dict[str, Any], label: str) -> OperatingSchedule:
+    schedule_data = dict(data)
+    _tupleize(schedule_data, ("days", "seasons", "peak_periods"))
+    return _dataclass_from_mapping(OperatingSchedule, schedule_data, label)
+
+
+def _financial_profile_from_mapping(
+    data: dict[str, Any] | None,
+    label: str,
+) -> FinancialInstitutionProfile | None:
+    if data is None:
+        return None
+    profile_data = dict(data)
+    _tupleize(profile_data, ("market_roles", "participant_roles", "asset_classes"))
+    return _dataclass_from_mapping(FinancialInstitutionProfile, profile_data, label)
+
+
+def _delayed_effects_from_sequence(
+    data: list[Any] | tuple[Any, ...],
+    label: str,
+) -> tuple[DelayedEffect, ...]:
+    effects: list[DelayedEffect] = []
+    for index, value in enumerate(data):
+        item_label = f"{label}[{index}]"
+        if not isinstance(value, dict):
+            raise ScenarioError(f"{item_label} must be an object")
+        effect_data = dict(value)
+        _tupleize(effect_data, ("tags",))
+        effects.append(_dataclass_from_mapping(DelayedEffect, effect_data, item_label))
+    return tuple(effects)
 
 
 def _tupleize(data: dict[str, Any], keys: tuple[str, ...]) -> None:

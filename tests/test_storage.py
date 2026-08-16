@@ -1,4 +1,9 @@
-from city_simulator.storage import city_path, ensure_data_dirs, saved_cities, scenario_path
+from city_simulator.storage import (
+    city_path,
+    ensure_data_dirs,
+    saved_cities,
+    scenario_path,
+)
 
 
 def test_named_paths_use_data_home(tmp_path, monkeypatch):

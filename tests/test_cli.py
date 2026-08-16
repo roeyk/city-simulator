@@ -61,6 +61,54 @@ def test_cli_compares_multiple_scenarios(tmp_path, capsys):
     assert "business" in output
 
 
+def test_cli_comparison_includes_causal_briefing(tmp_path, capsys):
+    city = tmp_path / "city.json"
+    city.write_text('{"population": 100000}', encoding="utf-8")
+    restrictive = tmp_path / "restrictive.json"
+    restrictive.write_text(
+        json.dumps(
+            {
+                "name": "restrictive growth",
+                "years": 2,
+                "policy": {
+                    "housing_investment": 10_000_000,
+                    "zoning_restrictiveness": 0.85,
+                    "development_restriction": 0.25,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    jobs = tmp_path / "jobs.json"
+    jobs.write_text(
+        json.dumps(
+            {
+                "name": "jobs push",
+                "years": 2,
+                "policy": {
+                    "business_support": 90_000_000,
+                    "permitting_speed": 0.8,
+                    "housing_investment": 55_000_000,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    exit_code = main(
+        ["--city", str(city), "--scenario", str(restrictive), "--scenario", str(jobs)]
+    )
+
+    assert exit_code == 0
+    output = capsys.readouterr().out
+    assert "Scenario Briefing" in output
+    assert "restrictive growth:" in output
+    assert "jobs push:" in output
+    assert "Main causes:" in output
+    assert "local zoning and development restrictions deter migration" in output
+    assert "business support and infrastructure expanded jobs" in output
+
+
 def test_cli_accepts_migration_and_restriction_flags(capsys):
     exit_code = main(
         [

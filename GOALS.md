@@ -20,6 +20,7 @@ The simulator should answer:
 
 - who lives in the city now;
 - whether people moved in or left;
+- which civic, financial, market, and infrastructure institutions exist;
 - which policies attracted or deterred population;
 - what issues emerged;
 - what issues were overcome;
@@ -35,6 +36,24 @@ issues diverge.
 The output should feel like a mayoral briefing backed by transparent numbers,
 not a graphics-first game and not a raw spreadsheet dump.
 
+## Project Positioning
+
+City Simulator is intended to sit between two kinds of systems:
+
+- compact AI settlement/crisis benchmarks such as Pocket Providence-style
+  experiments, where a model makes constrained decisions over a short crisis and
+  is judged on survival, resource tradeoffs, ethics, and postmortem reasoning;
+- professional urban analysis systems such as UrbanSim or geospatial settlement
+  tooling, where policy scenarios, land use, households, jobs, infrastructure,
+  and regional pressures are analyzed with more formal data and planning
+  workflows.
+
+This project should be more systemic than a toy crisis benchmark, but more
+inspectable and gameplay-oriented than a professional planning model. It should
+support annual mayor-scale scenario comparison, while eventually allowing
+smaller compact crisis benchmarks to test emergency decision-making, resource
+triage, ethics, and causal reasoning.
+
 ## Scenario Model
 
 Scenarios should support multiple levels of control:
@@ -46,6 +65,9 @@ Scenarios should support multiple levels of control:
 - State controls: funding, service mandates, and environmental mandates.
 - Country controls: federal funding, population growth pressure, interest
   rates, and national unemployment pressure.
+- Market and financial context: credit availability, municipal finance access,
+  bond-market exposure, energy-market access, commodity exposure, lender
+  presence, and institutional liquidity or risk where those systems are modeled.
 
 This structure lets the project test questions such as:
 

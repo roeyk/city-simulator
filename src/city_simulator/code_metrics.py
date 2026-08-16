@@ -3,10 +3,10 @@ from __future__ import annotations
 import argparse
 import ast
 import json
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from statistics import mean
-from typing import Iterable
 
 
 @dataclass(frozen=True)
@@ -140,15 +140,24 @@ def _python_files(paths: Iterable[str | Path]) -> list[Path]:
     files: list[Path] = []
     for raw_path in paths:
         path = Path(raw_path)
-        if path.is_file() and path.suffix == ".py":
+        if _is_analyzable_python_file(path):
             files.append(path)
         elif path.is_dir():
             files.extend(
                 child
                 for child in path.rglob("*.py")
-                if "__pycache__" not in child.parts
+                if _is_analyzable_python_file(child)
             )
     return sorted(files)
+
+
+def _is_analyzable_python_file(path: Path) -> bool:
+    return (
+        path.suffix == ".py"
+        and path.is_file()
+        and not path.name.startswith(".")
+        and "__pycache__" not in path.parts
+    )
 
 
 def _module_name(path: Path) -> str:

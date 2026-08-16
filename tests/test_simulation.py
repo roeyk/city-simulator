@@ -1,7 +1,23 @@
+from dataclasses import replace
+
 import pytest
 
-from city_simulator import CityPolicy, CityState, simulate
-from city_simulator.model import CitySensitivity, ModelParameters, advance_year, detect_issues
+from city_simulator import (
+    CityPolicy,
+    CityState,
+    DelayedEffect,
+    Demographics,
+    EmbeddedService,
+    PlaceAsset,
+    active_delayed_effects,
+    simulate,
+)
+from city_simulator.model import (
+    CitySensitivity,
+    ModelParameters,
+    advance_year,
+    detect_issues,
+)
 
 
 def test_simulation_advances_requested_years():
@@ -134,6 +150,28 @@ def test_turn_preserves_profiles_that_feed_derived_metrics():
         cohort_profiles={"age_income_percent": {"under_18": {"low": 60, "middle": 35, "high": 5}}},
         physical_profile={"area_square_miles": 50},
         civic_assets={"schools": 40, "fire_stations": 10, "police_stations": 6, "libraries": 8},
+        place_assets=(
+            PlaceAsset(
+                name="Public Works Depot",
+                asset_type="public_works_depot",
+                services=(
+                    EmbeddedService(
+                        name="Street Cleaning",
+                        service_type="street_cleaning",
+                        capacity=25,
+                    ),
+                ),
+            ),
+        ),
+        pending_effects=(
+            DelayedEffect(
+                source="summer_blackout",
+                target="civic_trust",
+                amount=-4.0,
+                duration_turns=2,
+                decay_rate=0.25,
+            ),
+        ),
     )
 
     result = advance_year(city, CityPolicy())
@@ -142,7 +180,142 @@ def test_turn_preserves_profiles_that_feed_derived_metrics():
     assert result.state.cohort_profiles == city.cohort_profiles
     assert result.state.physical_profile == city.physical_profile
     assert result.state.civic_assets == city.civic_assets
+    assert result.state.place_assets == city.place_assets
+    assert result.state.pending_effects[0].amount == pytest.approx(-3.0)
     assert result.state.metrics.density_per_square_mile > 0
+
+
+def test_delayed_effects_advance_across_turns():
+    city = CityState(
+        pending_effects=(
+            DelayedEffect(
+                source="summer_blackout",
+                target="infrastructure_backlog",
+                amount=12_000_000,
+                delay_turns=1,
+                duration_turns=3,
+                tags=("grid", "capital_repair"),
+            ),
+            DelayedEffect(
+                source="heat_deaths",
+                target="civic_trust",
+                amount=-6.0,
+                delay_turns=0,
+                duration_turns=2,
+                decay_rate=0.5,
+            ),
+        )
+    )
+
+    assert [effect.target for effect in active_delayed_effects(city)] == ["civic_trust"]
+
+    after_one = advance_year(city, CityPolicy()).state
+
+    assert [effect.target for effect in active_delayed_effects(after_one)] == [
+        "infrastructure_backlog",
+        "civic_trust",
+    ]
+    assert after_one.pending_effects[0].delay_turns == 0
+    assert after_one.pending_effects[0].duration_turns == 3
+    assert after_one.pending_effects[1].amount == pytest.approx(-3.0)
+    assert after_one.pending_effects[1].duration_turns == 1
+    assert active_delayed_effects(after_one, "civic_trust")[0].source == "heat_deaths"
+
+    after_two = advance_year(after_one, CityPolicy()).state
+
+    assert [effect.target for effect in after_two.pending_effects] == ["infrastructure_backlog"]
+    assert after_two.pending_effects[0].duration_turns == 2
+
+
+def test_default_city_does_not_create_seasonal_heat_cascade():
+    result = advance_year(CityState(), CityPolicy())
+
+    assert result.pressure_ledger.signals == {}
+    assert "seasonal_heat_cascade" not in {issue.code for issue in result.active_issues}
+    assert not result.state.pending_effects
+
+
+def test_heat_grid_health_cascade_records_pressures_and_delayed_effects():
+    stressed = CityState(
+        population=120_000,
+        demographics=Demographics(
+            children=18_000,
+            working_age=72_000,
+            seniors=30_000,
+            low_income=48_000,
+            middle_income=54_000,
+            high_income=18_000,
+        ),
+        physical_profile={
+            "area_square_miles": 24,
+            "seasonal_exposure": {"summer_heat": 8},
+        },
+        civic_assets={"schools": 20, "fire_stations": 4, "police_stations": 3, "libraries": 3},
+        infrastructure=34,
+        pollution=78,
+        satisfaction=44,
+        place_assets=(
+            PlaceAsset(
+                name="Old Substation",
+                asset_type="electric_substation",
+                services=(
+                    EmbeddedService(
+                        name="Grid Capacity",
+                        service_type="electric_grid",
+                        capacity=20,
+                    ),
+                ),
+            ),
+            PlaceAsset(
+                name="Neighborhood Clinic",
+                asset_type="clinic",
+                services=(
+                    EmbeddedService(
+                        name="Urgent Care",
+                        service_type="healthcare",
+                        capacity=12,
+                    ),
+                ),
+            ),
+        ),
+    )
+
+    result = advance_year(
+        stressed,
+        CityPolicy(environment_investment=0, transit_investment=0, services_investment=0),
+    )
+
+    assert result.pressure_ledger.get("summer_heat_exposure") > 10
+    assert result.pressure_ledger.get("grid_shortfall") > 5
+    assert result.pressure_ledger.get("healthcare_surge") > 5
+    assert "seasonal_heat_cascade" in {issue.code for issue in result.active_issues}
+    assert {
+        effect.target for effect in result.state.pending_effects
+    } >= {
+        "infrastructure_backlog",
+        "healthcare_surge",
+        "civic_trust",
+    }
+
+    after_one = advance_year(result.state, CityPolicy()).state
+    without_trust_effect = replace(
+        result.state,
+        pending_effects=tuple(
+            effect for effect in result.state.pending_effects if effect.target != "civic_trust"
+        ),
+    )
+    after_one_without_trust_effect = advance_year(without_trust_effect, CityPolicy()).state
+    after_two = advance_year(after_one, CityPolicy()).state
+    after_two_without_trust_effect = advance_year(
+        after_one_without_trust_effect,
+        CityPolicy(),
+    ).state
+
+    assert active_delayed_effects(after_one, "civic_trust")
+    assert (
+        after_two.metrics.sentiment_signals["civic_trust"]
+        < after_two_without_trust_effect.metrics.sentiment_signals["civic_trust"]
+    )
 
 
 def test_model_parameters_change_turn_behavior_without_rewriting_formulas():

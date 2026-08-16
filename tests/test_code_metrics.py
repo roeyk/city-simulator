@@ -71,3 +71,14 @@ def test_main_can_emit_json(tmp_path, capsys):
 
     assert output[0]["module"].endswith("module")
     assert output[0]["average_complexity"] == 1.0
+
+
+def test_analyze_paths_ignores_editor_lock_files(tmp_path):
+    source = tmp_path / "src"
+    source.mkdir()
+    (source / "model.py").write_text("def ok():\n    return True\n", encoding="utf-8")
+    (source / ".#model.py").symlink_to("missing-editor-lock-target")
+
+    metrics = analyze_paths([source])
+
+    assert [item.module for item in metrics] == ["model"]
