@@ -29,14 +29,15 @@ and future-confidence signals.
 City Simulator sits between a compact AI crisis benchmark and a professional
 urban-planning model.
 
-At the small end, it is inspired by Pocket Providence-style settlement
-benchmarks: constrained resources, short crisis horizons, named or
-representative people, hard tradeoffs, ethics constraints, and postmortems that
-test whether an AI understands the consequences of its decisions.
+At the small end, it is inspired by compact settlement-crisis benchmarks:
+constrained resources, short crisis horizons, named or representative people,
+hard tradeoffs, ethics constraints, and postmortems that test whether an AI
+understands the consequences of its decisions.
 
-At the large end, it borrows the scenario-comparison mindset of systems such as
-UrbanSim: policy levers, households, jobs, development, infrastructure,
-regional pressures, path-dependent yearly changes, and transparent reports.
+At the large end, it borrows the scenario-comparison mindset of professional
+urban simulation systems: policy levers, households, jobs, development,
+infrastructure, regional pressures, path-dependent yearly changes, and
+transparent reports.
 
 It is not trying to be a full GIS, econometric land-use forecast, or official
 planning model. It is a deterministic civic-systems sandbox for exploring

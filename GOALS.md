@@ -40,13 +40,12 @@ not a graphics-first game and not a raw spreadsheet dump.
 
 City Simulator is intended to sit between two kinds of systems:
 
-- compact AI settlement/crisis benchmarks such as Pocket Providence-style
-  experiments, where a model makes constrained decisions over a short crisis and
-  is judged on survival, resource tradeoffs, ethics, and postmortem reasoning;
-- professional urban analysis systems such as UrbanSim or geospatial settlement
-  tooling, where policy scenarios, land use, households, jobs, infrastructure,
-  and regional pressures are analyzed with more formal data and planning
-  workflows.
+- compact AI settlement/crisis benchmarks, where a model makes constrained
+  decisions over a short crisis and is judged on survival, resource tradeoffs,
+  ethics, and postmortem reasoning;
+- professional urban analysis systems and geospatial settlement tooling, where
+  policy scenarios, land use, households, jobs, infrastructure, and regional
+  pressures are analyzed with more formal data and planning workflows.
 
 This project should be more systemic than a toy crisis benchmark, but more
 inspectable and gameplay-oriented than a professional planning model. It should

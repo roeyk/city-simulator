@@ -199,12 +199,12 @@ but do not remove the need for feedback modeling: even a monthly turn can
 contain daily or hourly crisis dynamics. Keep the feedback machinery explicit
 and keep annual scenario reports as a supported output.
 
-## UrbanSim-Inspired Benchmark Goal
+## Professional Urban Simulation Benchmark Goal
 
-UrbanSim's examples organize a regional simulation around canonical tables,
-computed columns, named model steps, and fixed workflows. The useful benchmark
-for City Simulator is not to copy UrbanSim's full econometric or GIS stack, but
-to keep the same separation of concerns:
+Professional urban simulation examples often organize a regional simulation
+around canonical tables, computed columns, named model steps, and fixed
+workflows. The useful benchmark for City Simulator is not to copy a full
+econometric or GIS stack, but to keep the same separation of concerns:
 
 - canonical state stores source facts;
 - views bundle related aggregate statistics derived from lower-level models;
@@ -212,13 +212,13 @@ to keep the same separation of concerns:
 - step order is explicit because later steps depend on earlier outputs;
 - reports consume step outputs and views rather than recomputing hidden logic.
 
-UrbanSim is deeper than City Simulator currently is for parcel/building-level
-real estate, household and job location choice, prices/rents, development
-feasibility, and developer behavior. City Simulator is aiming at broader civic
-coverage: crisis cascades, public sentiment, public safety, services,
-partnerships, institutions, delayed effects, and mayor-style scenario
-briefings. Treat UrbanSim as the benchmark for the land-use and real-estate
-engine, not as the full scope of the game.
+Professional land-use simulators are deeper than City Simulator currently is
+for parcel/building-level real estate, household and job location choice,
+prices/rents, development feasibility, and developer behavior. City Simulator
+is aiming at broader civic coverage: crisis cascades, public sentiment, public
+safety, services, partnerships, institutions, delayed effects, and mayor-style
+scenario briefings. Treat professional land-use simulation as the benchmark for
+the real-estate engine, not as the full scope of the game.
 
 For real estate-style work, the eventual sequence should resemble:
 
