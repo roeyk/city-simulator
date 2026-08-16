@@ -56,6 +56,31 @@ class CitySensitivity:
 
 
 @dataclass(frozen=True)
+class CityRevenueSources:
+    resident_taxes: float = 0.0
+    business_taxes: float = 0.0
+    state_grants: float = 0.0
+    state_shared_revenue: float = 0.0
+    federal_grants: float = 0.0
+    fees_and_fines: float = 0.0
+    service_charges: float = 0.0
+    other: float = 0.0
+
+    @property
+    def total(self) -> float:
+        return (
+            self.resident_taxes
+            + self.business_taxes
+            + self.state_grants
+            + self.state_shared_revenue
+            + self.federal_grants
+            + self.fees_and_fines
+            + self.service_charges
+            + self.other
+        )
+
+
+@dataclass(frozen=True)
 class HousingStock:
     estate_home_units: float = 0.0
     large_lot_single_family_units: float = 0.0
@@ -332,6 +357,9 @@ class CityState:
     housing_units: float = 43_000
     jobs: float = 58_000
     budget: float = 125_000_000
+    annual_income: float = 0.0
+    annual_budget: float = 0.0
+    revenue_sources: CityRevenueSources = CityRevenueSources()
     infrastructure: float = 72.0
     pollution: float = 38.0
     satisfaction: float = 61.0
@@ -353,6 +381,7 @@ class CityState:
 @dataclass(frozen=True)
 class CityPolicy:
     tax_rate: float = 0.18
+    business_tax_rate: float = 0.10
     housing_investment: float = 25_000_000
     transit_investment: float = 18_000_000
     services_investment: float = 22_000_000

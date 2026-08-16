@@ -14,6 +14,7 @@ from city_simulator import (
 )
 from city_simulator.model import (
     ANNUAL_TURN_STEPS,
+    CityRevenueSources,
     CitySensitivity,
     ModelParameters,
     advance_year,
@@ -83,6 +84,45 @@ def test_default_policy_grows_population_and_jobs():
     assert 0 <= result.state.metrics.public_sentiment <= 100
 
 
+def test_business_tax_rate_raises_revenue_and_drags_jobs():
+    city = CityState(population=10_000, jobs=5_000)
+
+    baseline = advance_year(city, CityPolicy(business_tax_rate=0.10))
+    higher_tax = advance_year(city, CityPolicy(business_tax_rate=0.15))
+
+    assert higher_tax.revenue > baseline.revenue
+    assert higher_tax.jobs_delta < baseline.jobs_delta
+
+
+def test_explicit_annual_finance_uses_tax_policy_deltas():
+    city = CityState(
+        population=10,
+        jobs=18,
+        budget=0,
+        annual_income=45_000_000,
+        annual_budget=50_000_000,
+        revenue_sources=CityRevenueSources(
+            resident_taxes=16_000_000,
+            business_taxes=6_000_000,
+            state_grants=12_000_000,
+            state_shared_revenue=6_000_000,
+            federal_grants=3_000_000,
+            fees_and_fines=1_000_000,
+            service_charges=750_000,
+            other=250_000,
+        ),
+    )
+
+    baseline = advance_year(city, CityPolicy(business_tax_rate=0.10))
+    higher_tax = advance_year(city, CityPolicy(business_tax_rate=0.15))
+
+    assert baseline.revenue == pytest.approx(45_000_000)
+    assert baseline.expenses == pytest.approx(50_000_000)
+    assert baseline.state.budget == pytest.approx(-5_000_000)
+    assert higher_tax.revenue == pytest.approx(45_000_000 + 18 * 19_000 * 0.05)
+    assert higher_tax.expenses == pytest.approx(50_000_000)
+
+
 def test_housing_investment_reduces_housing_pressure():
     low = advance_year(CityState(), CityPolicy(housing_investment=0))
     high = advance_year(CityState(), CityPolicy(housing_investment=60_000_000))
@@ -93,6 +133,8 @@ def test_housing_investment_reduces_housing_pressure():
 def test_invalid_policy_is_rejected():
     with pytest.raises(ValueError, match="tax_rate"):
         simulate(CityState(), CityPolicy(tax_rate=1.4), 1)
+    with pytest.raises(ValueError, match="business_tax_rate"):
+        simulate(CityState(), CityPolicy(business_tax_rate=1.4), 1)
 
     with pytest.raises(ValueError, match="non-negative"):
         simulate(CityState(), CityPolicy(services_investment=-1), 1)

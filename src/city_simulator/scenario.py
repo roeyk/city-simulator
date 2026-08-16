@@ -8,6 +8,7 @@ from typing import Any
 from city_simulator.model import (
     CityMetrics,
     CityPolicy,
+    CityRevenueSources,
     CitySensitivity,
     CityState,
     DelayedEffect,
@@ -74,6 +75,9 @@ def city_from_mapping(data: dict[str, Any]) -> CityState:
     housing_assistance_data = data.get("housing_assistance", {})
     if not isinstance(housing_assistance_data, dict):
         raise ScenarioError("city housing_assistance must be an object")
+    revenue_sources_data = data.get("revenue_sources", {})
+    if not isinstance(revenue_sources_data, dict):
+        raise ScenarioError("city revenue_sources must be an object")
     neighborhoods_data = data.get("neighborhoods", {})
     if not isinstance(neighborhoods_data, dict):
         raise ScenarioError("city neighborhoods must be an object")
@@ -130,6 +134,7 @@ def city_from_mapping(data: dict[str, Any]) -> CityState:
             "sensitivity",
             "housing_stock",
             "housing_assistance",
+            "revenue_sources",
             "neighborhoods",
             "place_assets",
             "people",
@@ -147,6 +152,11 @@ def city_from_mapping(data: dict[str, Any]) -> CityState:
             "sensitivity": sensitivity,
             "housing_stock": housing_stock,
             "housing_assistance": housing_assistance,
+            "revenue_sources": _dataclass_from_mapping(
+                CityRevenueSources,
+                revenue_sources_data,
+                "city revenue_sources",
+            ),
             "neighborhoods": neighborhoods,
             "place_assets": place_assets,
             "people": _people_from_sequence(people_data, "city people"),

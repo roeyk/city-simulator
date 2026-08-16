@@ -25,10 +25,17 @@ def test_ten_citizen_mvp_city_loads():
     assert len(city.people) == 10
     assert len(city.households) == 5
     assert len(city.organizations) >= 20
-    assert city.budget == 50_000_000
+    assert city.budget == 0
+    assert city.annual_income == 45_000_000
+    assert city.annual_budget == 50_000_000
+    assert city.revenue_sources.total == 45_000_000
+    assert city.revenue_sources.business_taxes == 6_000_000
+    assert city.revenue_sources.state_grants == 12_000_000
     assert city.pollution == 22
     assert city.neighborhoods["village_hills"].housing_units == 160
     assert city.neighborhoods["summer_crescent_boulevard"].housing_units == 30
+    assert city.place_assets[0].name == "Woodlawn Elementary School"
+    assert city.place_assets[1].name == "Northbridge Middle and High School"
     assert city.people[0].display_name == "Juan Hernandez"
     assert "mortgage 25% paid" in city.households[0].debts
     hernandez = next(household for household in city.households if household.agent_id == "hernandez")
@@ -503,6 +510,16 @@ def test_load_scenario_reads_name_policy_and_years(tmp_path):
     assert policy.housing_investment == 70_000_000
     assert external.county_funding == 0
     assert years == 12
+
+
+def test_prosock_business_tax_increase_scenario_loads():
+    name, policy, _external, years = load_scenario(
+        "examples/scenarios/prosock-business-tax-increase.json"
+    )
+
+    assert name == "Prosock business tax increase"
+    assert policy.business_tax_rate == 0.15
+    assert years == 1
 
 
 def test_load_scenario_reads_higher_level_controls(tmp_path):

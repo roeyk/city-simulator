@@ -246,6 +246,7 @@ Scenario files can include:
 - `name`
 - `years`
 - `policy.tax_rate`
+- `policy.business_tax_rate`
 - `policy.housing_investment`
 - `policy.transit_investment`
 - `policy.services_investment`

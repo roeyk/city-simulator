@@ -18,6 +18,7 @@ from city_simulator.simulation import (
 from city_simulator.state import (
     CityMetrics,
     CityPolicy,
+    CityRevenueSources,
     CitySensitivity,
     CityState,
     DelayedEffect,
@@ -43,6 +44,7 @@ __all__ = [
     "Agent",
     "CityMetrics",
     "CityPolicy",
+    "CityRevenueSources",
     "CitySensitivity",
     "CityState",
     "DelayedEffect",

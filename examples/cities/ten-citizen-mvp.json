@@ -10,7 +10,19 @@
   },
   "housing_units": 190,
   "jobs": 18,
-  "budget": 50000000,
+  "budget": 0,
+  "annual_income": 45000000,
+  "annual_budget": 50000000,
+  "revenue_sources": {
+    "resident_taxes": 16000000,
+    "business_taxes": 6000000,
+    "state_grants": 12000000,
+    "state_shared_revenue": 6000000,
+    "federal_grants": 3000000,
+    "fees_and_fines": 1000000,
+    "service_charges": 750000,
+    "other": 250000
+  },
   "infrastructure": 70,
   "pollution": 22,
   "satisfaction": 58,
@@ -64,15 +76,28 @@
   },
   "place_assets": [
     {
-      "name": "Prosock School",
+      "name": "Woodlawn Elementary School",
       "asset_type": "school",
-      "capacity": 600,
-      "jobs": 25,
+      "capacity": 350,
+      "jobs": 18,
       "services": [
         {
-          "name": "K-12 Seats",
+          "name": "Elementary Seats",
           "service_type": "education",
-          "capacity": 600
+          "capacity": 350
+        }
+      ]
+    },
+    {
+      "name": "Northbridge Middle and High School",
+      "asset_type": "school",
+      "capacity": 550,
+      "jobs": 35,
+      "services": [
+        {
+          "name": "Middle and High School Seats",
+          "service_type": "education",
+          "capacity": 550
         }
       ]
     },

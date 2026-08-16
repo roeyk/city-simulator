@@ -1,0 +1,7 @@
+{
+  "name": "Prosock business tax increase",
+  "years": 1,
+  "policy": {
+    "business_tax_rate": 0.15
+  }
+}

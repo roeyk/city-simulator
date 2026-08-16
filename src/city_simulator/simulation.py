@@ -196,6 +196,8 @@ def _advance_delayed_effects(effects: tuple[DelayedEffect, ...]) -> tuple[Delaye
 def _validate_policy(policy: CityPolicy) -> None:
     if not 0.0 <= policy.tax_rate <= 1.0:
         raise ValueError("tax_rate must be between 0.0 and 1.0")
+    if not 0.0 <= policy.business_tax_rate <= 1.0:
+        raise ValueError("business_tax_rate must be between 0.0 and 1.0")
     rates = {
         "citizen_influx_rate": policy.citizen_influx_rate,
         "citizen_outflux_rate": policy.citizen_outflux_rate,
@@ -244,12 +246,19 @@ def _housing_units_added(
 
 
 def _tax_base(state: CityState) -> float:
-    income_base = (
+    return _resident_tax_base(state) + _business_tax_base(state)
+
+
+def _resident_tax_base(state: CityState) -> float:
+    return (
         state.demographics.low_income * 16_000
         + state.demographics.middle_income * 34_000
         + state.demographics.high_income * 72_000
     )
-    return income_base + state.jobs * 19_000
+
+
+def _business_tax_base(state: CityState) -> float:
+    return state.jobs * 19_000
 
 
 def _jobs_delta(
@@ -262,7 +271,7 @@ def _jobs_delta(
     infrastructure_effect = (
         state.infrastructure - 50.0
     ) * parameters.infrastructure_jobs_multiplier
-    tax_drag = max(policy.tax_rate - 0.2, 0.0) * parameters.high_tax_job_drag_multiplier
+    tax_drag = max(policy.business_tax_rate - 0.10, 0.0) * parameters.high_tax_job_drag_multiplier
     restriction_drag = (
         policy.development_restriction * parameters.development_job_drag_multiplier
     )
@@ -402,22 +411,55 @@ def _step_local_fiscal_policy(context: AnnualTurnContext) -> None:
         + context.external.state_funding
         + context.external.federal_funding
     )
-    context.revenue = _tax_base(context.state) * context.policy.tax_rate + intergovernmental_funding
+    context.revenue = _annual_revenue(context.state, context.policy) + intergovernmental_funding
     financing_cost = (
         max(context.state.budget, 0.0)
         * max(context.external.national_interest_rate, 0.0)
         * context.parameters.financing_cost_budget_share
     )
-    context.expenses = (
-        context.policy.housing_investment
-        + context.policy.transit_investment
-        + context.policy.services_investment
-        + context.policy.environment_investment
-        + context.policy.business_support
-        + context.state.population * context.parameters.resident_service_cost_per_person
-        + financing_cost
-    )
+    context.expenses = _annual_expenses(context.state, context.policy, context.parameters) + financing_cost
     context.budget = context.state.budget + context.revenue - context.expenses
+
+
+def _annual_revenue(state: CityState, policy: CityPolicy) -> float:
+    source_total = state.revenue_sources.total
+    if source_total > 0:
+        default_policy = CityPolicy()
+        return (
+            source_total
+            + _resident_tax_base(state) * (policy.tax_rate - default_policy.tax_rate)
+            + _business_tax_base(state)
+            * (policy.business_tax_rate - default_policy.business_tax_rate)
+        )
+    if state.annual_income > 0:
+        default_policy = CityPolicy()
+        return (
+            state.annual_income
+            + _resident_tax_base(state) * (policy.tax_rate - default_policy.tax_rate)
+            + _business_tax_base(state)
+            * (policy.business_tax_rate - default_policy.business_tax_rate)
+        )
+    return (
+        _resident_tax_base(state) * policy.tax_rate
+        + _business_tax_base(state) * policy.business_tax_rate
+    )
+
+
+def _annual_expenses(
+    state: CityState,
+    policy: CityPolicy,
+    parameters: ModelParameters,
+) -> float:
+    if state.annual_budget > 0:
+        return state.annual_budget
+    return (
+        policy.housing_investment
+        + policy.transit_investment
+        + policy.services_investment
+        + policy.environment_investment
+        + policy.business_support
+        + state.population * parameters.resident_service_cost_per_person
+    )
 
 
 def _step_development_and_jobs(context: AnnualTurnContext) -> None:
@@ -569,6 +611,9 @@ def _step_commit_state(context: AnnualTurnContext) -> None:
         housing_units=_required(context.housing_units, "housing_units"),
         jobs=_required(context.jobs, "jobs"),
         budget=_required(context.budget, "budget"),
+        annual_income=context.state.annual_income,
+        annual_budget=context.state.annual_budget,
+        revenue_sources=context.state.revenue_sources,
         infrastructure=_required(context.infrastructure, "infrastructure"),
         pollution=_required(context.pollution, "pollution"),
         satisfaction=_required(context.satisfaction, "satisfaction"),
