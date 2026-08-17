@@ -9,6 +9,11 @@ from city_simulator.agents import (
     OrganizationAgent,
     PersonAgent,
 )
+from city_simulator.heritage_catalog import (
+    canonical_heritage,
+    heritage_languages,
+    heritage_names,
+)
 from city_simulator.work_catalog import JobTemplate, eligible_job_template_for
 
 
@@ -177,25 +182,6 @@ COARSE_US_SYNTHETIC_PROFILE = SyntheticPopulationSourceProfile(
         "Neighborhood weights are local scenario placeholders until Prosock neighborhood profiles are sourced.",
     ),
 )
-
-
-HERITAGE_NAMES: dict[str, dict[str, tuple[str, ...]]] = {
-    "hispanic": {
-        "family": ("Hernandez", "Garcia", "Martinez", "Lopez", "Rivera"),
-        "adult": ("Juan", "Louise", "Carlos", "Marisol", "Elena", "Miguel"),
-        "child": ("Renee", "Jose", "Sofia", "Diego", "Lucia", "Mateo"),
-    },
-    "anglo": {
-        "family": ("Jones", "Harcourt", "Korr", "Miller", "Bennett"),
-        "adult": ("Dorothy", "Ron", "Jane", "John", "Anne", "Robert"),
-        "child": ("Morty", "Emily", "Thomas", "Grace", "Henry", "Claire"),
-    },
-    "jewish": {
-        "family": ("Katan", "Cohen", "Levine", "Rosen", "Shapiro"),
-        "adult": ("Yossi", "Miriam", "Ari", "Leah", "Noam", "Talia"),
-        "child": ("Eli", "Naomi", "Avi", "Maya", "Dina", "Jonah"),
-    },
-}
 
 
 def generate_synthetic_population(
@@ -453,15 +439,11 @@ def _child_agents(
 
 
 def _heritage_names(heritage: str) -> dict[str, tuple[str, ...]]:
-    key = heritage.lower()
-    if key not in HERITAGE_NAMES:
-        choices = ", ".join(sorted(HERITAGE_NAMES))
-        raise ValueError(f"unknown heritage {heritage!r}; choose one of: {choices}")
-    return HERITAGE_NAMES[key]
+    return heritage_names(heritage)
 
 
 def _cultural_identity(heritage: str) -> CulturalIdentity:
-    key = heritage.lower()
+    key = canonical_heritage(heritage)
     return CulturalIdentity(
         ethnicities=(key,),
         cultures=(key,),
@@ -470,13 +452,7 @@ def _cultural_identity(heritage: str) -> CulturalIdentity:
 
 
 def _heritage_languages(heritage: str) -> tuple[str, ...]:
-    match heritage:
-        case "hispanic":
-            return ("english", "spanish")
-        case "jewish":
-            return ("english", "hebrew")
-        case _:
-            return ("english",)
+    return heritage_languages(heritage)
 
 
 def _adoption_identity(

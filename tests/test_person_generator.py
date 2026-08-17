@@ -57,6 +57,61 @@ def test_generate_family_agents_is_deterministic_by_heritage_and_index():
     assert first.people[0].display_name == "Ari Levine"
 
 
+def test_generate_family_agents_supports_dmv_heritage_name_banks():
+    expected_cultures = {
+        "chinese": "chinese",
+        "japanese": "japanese",
+        "thai": "thai",
+        "korean": "korean",
+        "russian": "russian",
+        "ukrainian": "ukrainian",
+        "ethiopian": "ethiopian",
+        "egyptian": "egyptian",
+        "israeli": "israeli",
+        "israeli arab": "israeli_arab",
+        "french": "french",
+        "spanish": "spanish",
+        "mexican": "mexican",
+        "guatemalan": "guatemalan",
+        "brazilian": "brazilian",
+        "portuguese": "portuguese",
+        "canadian": "canadian",
+        "romanian": "romanian",
+        "polish": "polish",
+        "bulgarian": "bulgarian",
+        "nigerian": "nigerian",
+        "cameroon": "cameroonian",
+        "haitian": "haitian",
+        "vietnamese": "vietnamese",
+    }
+
+    for heritage, expected_culture in expected_cultures.items():
+        family = generate_family_agents(heritage, household_index=0, adults=1, children=1)
+
+        assert family.household.agent_id
+        assert len(family.people) == 2
+        assert family.people[0].identity.cultures == (expected_culture,)
+        assert family.people[0].identity.languages
+        assert family.people[1].identity.cultures == (expected_culture,)
+
+
+def test_generate_family_agents_accepts_common_heritage_aliases():
+    israeli_arab = generate_family_agents("israeli arab", adults=1)
+    misspelled_guatemalan = generate_family_agents("guatamalan", adults=1)
+    misspelled_cameroonian = generate_family_agents("camaroon", adults=1)
+
+    assert israeli_arab.people[0].identity.cultures == ("israeli_arab",)
+    assert misspelled_guatemalan.people[0].identity.cultures == ("guatemalan",)
+    assert misspelled_cameroonian.people[0].identity.cultures == ("cameroonian",)
+
+
+def test_language_model_currently_tracks_language_presence_not_proficiency():
+    family = generate_family_agents("haitian", adults=1)
+
+    assert family.people[0].identity.languages == ("haitian_creole", "french")
+    assert not hasattr(family.people[0].identity, "language_proficiency")
+
+
 def test_adopted_child_keeps_birth_identity_but_uses_raised_culture_name():
     family = generate_family_agents(
         "anglo",

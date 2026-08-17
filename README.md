@@ -24,6 +24,34 @@ are distinct from resident employment, and public sentiment combines survey,
 migration, business, spending, savings, housing, safety, services, civic-trust,
 and future-confidence signals.
 
+## What We Are Building
+
+City Simulator is becoming a causal urban policy sandbox: a yearly city-change
+engine that can explain why outcomes happen, who was affected, and through
+which civic systems.
+
+The simulator combines aggregate city systems with enough human, household,
+place, and institutional texture to make policies and shocks land unevenly and
+explainably. A policy should not directly change a headline metric such as
+happiness or population when a more concrete path exists. Instead, effects
+should flow through named mechanisms such as rent burden, service access, job
+access, language barriers, commute stress, mental-health pressure,
+neighborhood exposure, civic trust, business confidence, and delayed risks.
+
+The practical target is a mayoral or controller loop: change policy or face a
+scenario, advance the city, and receive a report that explains what changed,
+which residents, households, neighborhoods, businesses, and institutions were
+affected, which problems emerged or improved, and which risks are building for
+future turns.
+
+The interpersonal detail is not an end in itself, but it is an important
+reporting surface. The simulator should be able to produce grounded life
+stories, household stories, neighborhood stories, and institutional stories
+that explain city change at human scale. Those stories should be generated from
+access networks, institutions, household conditions, place-based constraints,
+and simulated events rather than from flat demographic labels or ungrounded
+fiction.
+
 ## Where This Project Sits
 
 City Simulator sits between a compact AI crisis benchmark and a professional
