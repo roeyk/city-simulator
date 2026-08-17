@@ -49,6 +49,38 @@ class GeneratedFamilyPopulation:
     organizations: tuple[OrganizationAgent, ...]
 
 
+@dataclass(frozen=True)
+class SyntheticPopulationRecipe:
+    heritages: tuple[tuple[str, float], ...] = (
+        ("anglo", 55.0),
+        ("hispanic", 30.0),
+        ("jewish", 15.0),
+    )
+    household_shapes: tuple[tuple[int, int, float], ...] = (
+        (1, 0, 28.0),
+        (2, 0, 22.0),
+        (1, 1, 16.0),
+        (2, 1, 16.0),
+        (2, 2, 18.0),
+    )
+    income_bands: tuple[tuple[str, float], ...] = (
+        ("low", 30.0),
+        ("middle", 55.0),
+        ("high", 15.0),
+    )
+    neighborhoods: tuple[tuple[str, str, float], ...] = (
+        ("village_hills", "low", 25.0),
+        ("summer_crescent_boulevard", "middle", 50.0),
+        ("market_district", "high", 25.0),
+    )
+    job_pools: tuple[tuple[str, float], ...] = (
+        ("private_service", 50.0),
+        ("city_service", 15.0),
+        ("government", 15.0),
+        ("business_owner", 20.0),
+    )
+
+
 HERITAGE_NAMES: dict[str, dict[str, tuple[str, ...]]] = {
     "hispanic": {
         "family": ("Hernandez", "Garcia", "Martinez", "Lopez", "Rivera"),
@@ -66,6 +98,51 @@ HERITAGE_NAMES: dict[str, dict[str, tuple[str, ...]]] = {
         "child": ("Eli", "Naomi", "Avi", "Maya", "Dina", "Jonah"),
     },
 }
+
+
+def generate_synthetic_population(
+    count: int,
+    recipe: SyntheticPopulationRecipe | None = None,
+) -> GeneratedFamilyPopulation:
+    if count < 0:
+        raise ValueError("count must be non-negative")
+    if recipe is None:
+        recipe = SyntheticPopulationRecipe()
+    specs: list[FamilyGenerationSpec] = []
+    remaining = count
+    household_index = 0
+    while remaining > 0:
+        adults, children = _synthetic_household_shape(recipe, household_index, remaining)
+        income_band = _weighted_label(recipe.income_bands, household_index * 2)
+        neighborhood, housing_cost_band = _synthetic_neighborhood(recipe, household_index)
+        adult_ages = tuple(24 + ((household_index + index) * 7 % 42) for index in range(adults))
+        adult_education = tuple(
+            _synthetic_education(income_band, household_index + index)
+            for index in range(adults)
+        )
+        specs.append(
+            FamilyGenerationSpec(
+                _weighted_label(recipe.heritages, household_index),
+                household_index=household_index,
+                adults=adults,
+                children=children,
+                income_band=income_band,
+                neighborhood=neighborhood,
+                housing_cost_band=housing_cost_band,
+                job_pools=tuple(
+                    _weighted_label(recipe.job_pools, household_index + index)
+                    for index in range(adults)
+                ),
+                adult_ages=adult_ages,
+                adult_education=adult_education,
+                adult_experience_years=tuple(
+                    max(age - 22, 1) for age in adult_ages
+                ),
+            )
+        )
+        remaining -= adults + children
+        household_index += 1
+    return generate_family_population(tuple(specs))
 
 
 def generate_family_population(
@@ -311,8 +388,94 @@ def _adoption_identity(
     )
 
 
+def _synthetic_household_shape(
+    recipe: SyntheticPopulationRecipe,
+    household_index: int,
+    remaining: int,
+) -> tuple[int, int]:
+    if remaining <= 1:
+        return (1, 0)
+    fitting_shapes = tuple(
+        (adults, children, weight)
+        for adults, children, weight in recipe.household_shapes
+        if adults + children <= remaining
+    )
+    if not fitting_shapes:
+        return (1, 0)
+    return _weighted_household_shape(fitting_shapes, household_index)
+
+
+def _synthetic_neighborhood(
+    recipe: SyntheticPopulationRecipe,
+    household_index: int,
+) -> tuple[str, str]:
+    return _weighted_neighborhood(recipe.neighborhoods, household_index)
+
+
+def _synthetic_education(income_band: str, index: int) -> str:
+    match income_band:
+        case "high":
+            choices = (("college", 60.0), ("graduate", 40.0))
+        case "middle":
+            choices = (("high_school", 35.0), ("trade", 30.0), ("college", 35.0))
+        case _:
+            choices = (("high_school", 70.0), ("trade", 25.0), ("college", 5.0))
+    return _weighted_label(choices, index)
+
+
+def _weighted_label(values: tuple[tuple[str, float], ...], index: int) -> str:
+    total = sum(weight for _label, weight in values)
+    if total <= 0:
+        raise ValueError("weighted choices must have positive total weight")
+    target = _weighted_target(index, total)
+    cumulative = 0
+    for label, weight in values:
+        cumulative += round(weight)
+        if target < cumulative:
+            return label
+    return values[-1][0]
+
+
+def _weighted_household_shape(
+    values: tuple[tuple[int, int, float], ...],
+    index: int,
+) -> tuple[int, int]:
+    total = sum(weight for _adults, _children, weight in values)
+    if total <= 0:
+        raise ValueError("weighted choices must have positive total weight")
+    target = _weighted_target(index, total)
+    cumulative = 0
+    for adults, children, weight in values:
+        cumulative += round(weight)
+        if target < cumulative:
+            return (adults, children)
+    adults, children, _weight = values[-1]
+    return (adults, children)
+
+
+def _weighted_neighborhood(
+    values: tuple[tuple[str, str, float], ...],
+    index: int,
+) -> tuple[str, str]:
+    total = sum(weight for _neighborhood, _housing_cost_band, weight in values)
+    if total <= 0:
+        raise ValueError("weighted choices must have positive total weight")
+    target = _weighted_target(index, total)
+    cumulative = 0
+    for neighborhood, housing_cost_band, weight in values:
+        cumulative += round(weight)
+        if target < cumulative:
+            return (neighborhood, housing_cost_band)
+    neighborhood, housing_cost_band, _weight = values[-1]
+    return (neighborhood, housing_cost_band)
+
+
 def _pick(values: tuple[str, ...], index: int) -> str:
     return values[index % len(values)]
+
+
+def _weighted_target(index: int, total: float) -> int:
+    return (index * 37) % round(total)
 
 
 def _agent_id(*parts: str) -> str:

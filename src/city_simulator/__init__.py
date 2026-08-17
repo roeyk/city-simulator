@@ -46,8 +46,10 @@ from city_simulator.person_generator import (
     FamilyGenerationSpec,
     GeneratedFamily,
     GeneratedFamilyPopulation,
+    SyntheticPopulationRecipe,
     generate_family_agents,
     generate_family_population,
+    generate_synthetic_population,
 )
 from city_simulator.scenario import ScenarioError, load_city, load_scenario
 from city_simulator.starter import STARTER_PRESETS, starter_city, write_starter_city
@@ -106,6 +108,7 @@ __all__ = [
     "PopulationStructureView",
     "PressureLedger",
     "ScenarioError",
+    "SyntheticPopulationRecipe",
     "TradeSchoolProgram",
     "View",
     "YearResult",
@@ -120,6 +123,7 @@ __all__ = [
     "generate_family_agents",
     "generate_family_population",
     "generate_representative_citizens",
+    "generate_synthetic_population",
     "job_template_for",
     "living_conditions_for",
     "load_city",

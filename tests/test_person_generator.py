@@ -1,11 +1,13 @@
 from city_simulator import (
     FamilyGenerationSpec,
+    SyntheticPopulationRecipe,
     college_program_for,
     college_program_weight,
     college_programs_for_credential,
     eligible_job_template_for,
     generate_family_agents,
     generate_family_population,
+    generate_synthetic_population,
     job_template_for,
     trade_school_program_for,
     weighted_college_program_for,
@@ -148,6 +150,57 @@ def test_generate_family_population_returns_families_before_people():
         "harcourt",
     ]
     assert population.organizations == ()
+
+
+def test_generate_synthetic_population_creates_exact_count():
+    population = generate_synthetic_population(5)
+
+    assert len(population.people) == 5
+    assert len(population.households) >= 1
+    assert population.people == tuple(
+        person for family in population.families for person in family.people
+    )
+    assert all(person.household_id for person in population.people)
+    assert all(person.identity.cultures for person in population.people)
+    assert any(person.role for person in population.people if not person.is_child)
+
+
+def test_generate_synthetic_population_is_deterministic():
+    first = generate_synthetic_population(7)
+    second = generate_synthetic_population(7)
+
+    assert first == second
+
+
+def test_generate_synthetic_population_uses_recipe_weights():
+    recipe = SyntheticPopulationRecipe(
+        heritages=(("jewish", 1.0),),
+        household_shapes=((1, 0, 1.0),),
+        income_bands=(("high", 1.0),),
+        neighborhoods=(("market_district", "high", 1.0),),
+        job_pools=(("government", 1.0),),
+    )
+
+    population = generate_synthetic_population(3, recipe)
+
+    assert len(population.people) == 3
+    assert {person.identity.cultures for person in population.people} == {("jewish",)}
+    assert {person.neighborhood for person in population.people} == {"market_district"}
+    assert {person.income_band for person in population.people} == {"middle"}
+    assert [person.role for person in population.people] == [
+        "court clerk",
+        "court clerk",
+        "legislative aide",
+    ]
+
+
+def test_generate_synthetic_population_rejects_negative_count():
+    try:
+        generate_synthetic_population(-1)
+    except ValueError as exc:
+        assert "count must be non-negative" in str(exc)
+    else:
+        raise AssertionError("negative synthetic population count should be rejected")
 
 
 def test_generate_family_agents_draws_city_service_jobs_from_catalog():

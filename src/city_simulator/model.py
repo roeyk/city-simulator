@@ -18,8 +18,10 @@ from city_simulator.person_generator import (
     FamilyGenerationSpec,
     GeneratedFamily,
     GeneratedFamilyPopulation,
+    SyntheticPopulationRecipe,
     generate_family_agents,
     generate_family_population,
+    generate_synthetic_population,
 )
 from city_simulator.simulation import (
     ANNUAL_TURN_STEPS,
@@ -102,6 +104,7 @@ __all__ = [
     "PlaceAsset",
     "PopulationStructureView",
     "PressureLedger",
+    "SyntheticPopulationRecipe",
     "TradeSchoolProgram",
     "View",
     "YearResult",
@@ -116,6 +119,7 @@ __all__ = [
     "eligible_job_template_for",
     "generate_family_agents",
     "generate_family_population",
+    "generate_synthetic_population",
     "job_template_for",
     "living_conditions_for",
     "simulate",
