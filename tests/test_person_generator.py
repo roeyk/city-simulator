@@ -1,5 +1,6 @@
 from city_simulator import (
     FamilyGenerationSpec,
+    JobTemplate,
     SyntheticPopulationRecipe,
     college_program_for,
     college_program_weight,
@@ -165,6 +166,18 @@ def test_generate_synthetic_population_creates_exact_count():
     assert any(person.role for person in population.people if not person.is_child)
 
 
+def test_generate_synthetic_population_derives_adult_income_from_jobs():
+    population = generate_synthetic_population(5)
+
+    assert [person.income_band for person in population.people] == [
+        "low",
+        "low",
+        "middle",
+        "middle",
+        "middle",
+    ]
+
+
 def test_generate_synthetic_population_is_deterministic():
     first = generate_synthetic_population(7)
     second = generate_synthetic_population(7)
@@ -268,6 +281,41 @@ def test_trade_school_jobs_include_hvac_and_roofing_paths():
     assert hvac.sector == "hvac_services"
     assert roofing.role == "roofer"
     assert roofing.sector == "roofing_services"
+
+
+def test_trade_income_progresses_with_experience():
+    plumber = JobTemplate(
+        role="plumber",
+        employment_status="employed",
+        income_band="middle",
+        employer_type="private_business",
+        sector="plumbing_services",
+        required_education="trade",
+        min_experience_years=1,
+        entry_income_band="middle",
+        experienced_income_band="high",
+    )
+    entry = generate_family_agents(
+        "anglo",
+        adults=1,
+        adult_jobs=(plumber,),
+        adult_ages=(26,),
+        adult_education=("trade",),
+        adult_experience_years=(2,),
+    )
+    experienced = generate_family_agents(
+        "anglo",
+        adults=1,
+        adult_jobs=(plumber,),
+        adult_ages=(42,),
+        adult_education=("trade",),
+        adult_experience_years=(18,),
+    )
+
+    assert entry.people[0].role == "plumber"
+    assert entry.people[0].income_band == "middle"
+    assert experienced.people[0].role == "plumber"
+    assert experienced.people[0].income_band == "high"
 
 
 def test_trade_school_program_catalog_includes_core_choices():

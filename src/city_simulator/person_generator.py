@@ -231,6 +231,8 @@ def generate_family_agents(
         adult_roles,
         ages,
         jobs,
+        adult_education,
+        adult_experience_years,
         cultural_identity,
     ) + _child_agents(
         names,
@@ -274,6 +276,8 @@ def _adult_agents(
     adult_roles: tuple[str, ...],
     adult_ages: tuple[int, ...],
     adult_jobs: tuple[JobTemplate, ...],
+    adult_education: tuple[str, ...],
+    adult_experience_years: tuple[int, ...],
     identity: CulturalIdentity,
 ) -> tuple[PersonAgent, ...]:
     people: list[PersonAgent] = []
@@ -286,7 +290,12 @@ def _adult_agents(
                 household_id=household_id,
                 display_name=f"{given} {family_name}",
                 age=adult_ages[index],
-                income_band=job.income_band if job else income_band,
+                income_band=_adult_generated_income_band(
+                    income_band,
+                    job,
+                    _adult_education(adult_education, index),
+                    _adult_experience_years(adult_experience_years, index),
+                ),
                 employment_status=job.employment_status if job else "employed",
                 role=job.role if job else _adult_role(adult_roles, index),
                 neighborhood=neighborhood,
@@ -550,6 +559,34 @@ def _adult_experience_years(adult_experience_years: tuple[int, ...], index: int)
         if index < len(adult_experience_years)
         else adult_experience_years[-1]
     )
+
+
+def _adult_generated_income_band(
+    fallback_income_band: str,
+    job: JobTemplate | None,
+    education: str,
+    experience_years: int,
+) -> str:
+    if job is None:
+        return fallback_income_band
+    entry_band = job.entry_income_band or job.income_band
+    experienced_band = job.experienced_income_band or job.income_band
+    if experience_years < max(job.min_experience_years + 5, 8):
+        return entry_band
+    if _education_rank(education) < _education_rank(job.required_education):
+        return entry_band
+    return experienced_band
+
+
+def _education_rank(education: str) -> int:
+    ranks = {
+        "none": 0,
+        "high_school": 1,
+        "trade": 2,
+        "college": 3,
+        "graduate": 4,
+    }
+    return ranks.get(education, 0)
 
 
 def _household_support_capacity(

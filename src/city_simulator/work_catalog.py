@@ -19,6 +19,8 @@ class JobTemplate:
     min_age: int = 18
     required_education: str = "none"
     min_experience_years: int = 0
+    entry_income_band: str = ""
+    experienced_income_band: str = ""
 
 
 @dataclass(frozen=True)
@@ -535,6 +537,8 @@ PRIVATE_SERVICE_JOBS: tuple[JobTemplate, ...] = (
         organization_type="business",
         required_education="trade",
         min_experience_years=1,
+        entry_income_band="middle",
+        experienced_income_band="high",
     ),
     JobTemplate(
         role="HVAC technician",
@@ -546,6 +550,8 @@ PRIVATE_SERVICE_JOBS: tuple[JobTemplate, ...] = (
         organization_type="business",
         required_education="trade",
         min_experience_years=1,
+        entry_income_band="middle",
+        experienced_income_band="high",
     ),
     JobTemplate(
         role="roofer",
@@ -557,6 +563,8 @@ PRIVATE_SERVICE_JOBS: tuple[JobTemplate, ...] = (
         organization_type="business",
         required_education="trade",
         min_experience_years=1,
+        entry_income_band="middle",
+        experienced_income_band="high",
     ),
     JobTemplate(
         role="medical assistant",
@@ -635,6 +643,8 @@ BUSINESS_OWNER_JOBS: tuple[JobTemplate, ...] = tuple(
         sector=business.sector,
         serves=business.customer_types,
         organization_type="business",
+        entry_income_band=business.income_band,
+        experienced_income_band="high",
     )
     for business in OWNER_OPERATED_BUSINESSES
 )
