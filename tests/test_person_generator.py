@@ -1,7 +1,9 @@
 from city_simulator import (
+    COARSE_US_SYNTHETIC_PROFILE,
     FamilyGenerationSpec,
     JobTemplate,
     SyntheticPopulationRecipe,
+    SyntheticPopulationSourceProfile,
     college_program_for,
     college_program_weight,
     college_programs_for_credential,
@@ -205,6 +207,95 @@ def test_generate_synthetic_population_uses_recipe_weights():
         "court clerk",
         "legislative aide",
     ]
+
+
+def test_generate_synthetic_population_adds_cultural_religious_institutions():
+    recipe = SyntheticPopulationRecipe(
+        heritages=(("jewish", 1.0),),
+        household_shapes=((1, 0, 1.0),),
+        income_bands=(("middle", 1.0),),
+        neighborhoods=(("summer_crescent_boulevard", "middle", 1.0),),
+        job_pools=(("private_service", 1.0),),
+    )
+
+    population = generate_synthetic_population(3, recipe)
+
+    assert [organization.display_name for organization in population.organizations] == [
+        "Jewish synagogue",
+    ]
+    assert population.organizations[0].notes == (
+        "serves jewish community",
+        "leader role: rabbi",
+    )
+
+
+def test_generate_synthetic_population_adds_hispanic_church_and_bishop_context():
+    recipe = SyntheticPopulationRecipe(
+        heritages=(("hispanic", 1.0),),
+        household_shapes=((1, 0, 1.0),),
+        income_bands=(("middle", 1.0),),
+        neighborhoods=(("summer_crescent_boulevard", "middle", 1.0),),
+        job_pools=(("private_service", 1.0),),
+    )
+
+    population = generate_synthetic_population(15, recipe)
+
+    assert [organization.display_name for organization in population.organizations] == [
+        "Hispanic church",
+        "Hispanic diocese office",
+    ]
+    assert population.organizations[0].notes[1] == "leader role: priest"
+    assert population.organizations[1].notes[1] == "leader role: bishop"
+
+
+def test_faith_leaders_are_job_templates_with_prerequisites():
+    young_worker = eligible_job_template_for(
+        "faith_leader",
+        0,
+        age=30,
+        education="graduate",
+        experience_years=4,
+    )
+    senior_worker = eligible_job_template_for(
+        "faith_leader",
+        3,
+        age=52,
+        education="graduate",
+        experience_years=20,
+    )
+
+    assert young_worker.role == "rabbi"
+    assert young_worker.required_education == "graduate"
+    assert senior_worker.role == "bishop"
+    assert senior_worker.min_experience_years == 15
+
+
+def test_coarse_synthetic_profile_documents_source_assumptions():
+    assert COARSE_US_SYNTHETIC_PROFILE.name == "coarse_us_proxy"
+    assert any("ACS/PUMS" in note for note in COARSE_US_SYNTHETIC_PROFILE.source_notes)
+    assert any("IPEDS" in note for note in COARSE_US_SYNTHETIC_PROFILE.source_notes)
+    assert any("BLS" in note for note in COARSE_US_SYNTHETIC_PROFILE.source_notes)
+
+
+def test_synthetic_source_profile_converts_to_recipe():
+    profile = SyntheticPopulationSourceProfile(
+        name="test_profile",
+        heritages=(("hispanic", 1.0),),
+        household_shapes=((2, 1, 1.0),),
+        income_bands=(("middle", 1.0),),
+        neighborhoods=(("summer_crescent_boulevard", "middle", 1.0),),
+        job_pools=(("private_service", 1.0),),
+        source_notes=("fixture profile",),
+    )
+
+    population = generate_synthetic_population(3, profile.as_recipe())
+
+    assert len(population.people) == 3
+    assert len(population.households) == 1
+    assert {person.identity.cultures for person in population.people} == {("hispanic",)}
+    assert {person.neighborhood for person in population.people} == {
+        "summer_crescent_boulevard",
+    }
 
 
 def test_generate_synthetic_population_rejects_negative_count():

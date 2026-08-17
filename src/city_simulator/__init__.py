@@ -43,10 +43,12 @@ from city_simulator.model import (
     simulate,
 )
 from city_simulator.person_generator import (
+    COARSE_US_SYNTHETIC_PROFILE,
     FamilyGenerationSpec,
     GeneratedFamily,
     GeneratedFamilyPopulation,
     SyntheticPopulationRecipe,
+    SyntheticPopulationSourceProfile,
     generate_family_agents,
     generate_family_population,
     generate_synthetic_population,
@@ -71,6 +73,7 @@ from city_simulator.work_catalog import (
 
 __all__ = [
     "ANNUAL_TURN_STEPS",
+    "COARSE_US_SYNTHETIC_PROFILE",
     "STARTER_PRESETS",
     "AdoptionIdentity",
     "Agent",
@@ -109,6 +112,7 @@ __all__ = [
     "PressureLedger",
     "ScenarioError",
     "SyntheticPopulationRecipe",
+    "SyntheticPopulationSourceProfile",
     "TradeSchoolProgram",
     "View",
     "YearResult",

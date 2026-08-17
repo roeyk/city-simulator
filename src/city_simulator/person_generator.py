@@ -50,6 +50,16 @@ class GeneratedFamilyPopulation:
 
 
 @dataclass(frozen=True)
+class CommunityInstitutionTemplate:
+    culture: str
+    organization_type: str
+    sector: str
+    display_name: str
+    leader_role: str
+    min_people: int = 1
+
+
+@dataclass(frozen=True)
 class SyntheticPopulationRecipe:
     heritages: tuple[tuple[str, float], ...] = (
         ("anglo", 55.0),
@@ -74,11 +84,99 @@ class SyntheticPopulationRecipe:
         ("market_district", "high", 25.0),
     )
     job_pools: tuple[tuple[str, float], ...] = (
-        ("private_service", 50.0),
+        ("private_service", 45.0),
         ("city_service", 15.0),
         ("government", 15.0),
         ("business_owner", 20.0),
+        ("faith_leader", 5.0),
     )
+    community_institutions: tuple[CommunityInstitutionTemplate, ...] = (
+        CommunityInstitutionTemplate(
+            culture="jewish",
+            organization_type="religious_institution",
+            sector="faith_community",
+            display_name="synagogue",
+            leader_role="rabbi",
+        ),
+        CommunityInstitutionTemplate(
+            culture="hispanic",
+            organization_type="religious_institution",
+            sector="faith_community",
+            display_name="church",
+            leader_role="priest",
+        ),
+        CommunityInstitutionTemplate(
+            culture="hispanic",
+            organization_type="religious_institution",
+            sector="faith_community",
+            display_name="diocese office",
+            leader_role="bishop",
+            min_people=15,
+        ),
+    )
+
+
+@dataclass(frozen=True)
+class SyntheticPopulationSourceProfile:
+    name: str
+    heritages: tuple[tuple[str, float], ...]
+    household_shapes: tuple[tuple[int, int, float], ...]
+    income_bands: tuple[tuple[str, float], ...]
+    neighborhoods: tuple[tuple[str, str, float], ...]
+    job_pools: tuple[tuple[str, float], ...]
+    community_institutions: tuple[CommunityInstitutionTemplate, ...] = ()
+    source_notes: tuple[str, ...] = ()
+
+    def as_recipe(self) -> SyntheticPopulationRecipe:
+        return SyntheticPopulationRecipe(
+            heritages=self.heritages,
+            household_shapes=self.household_shapes,
+            income_bands=self.income_bands,
+            neighborhoods=self.neighborhoods,
+            job_pools=self.job_pools,
+            community_institutions=self.community_institutions,
+        )
+
+
+COARSE_US_SYNTHETIC_PROFILE = SyntheticPopulationSourceProfile(
+    name="coarse_us_proxy",
+    heritages=(
+        ("anglo", 55.0),
+        ("hispanic", 30.0),
+        ("jewish", 15.0),
+    ),
+    household_shapes=(
+        (1, 0, 28.0),
+        (2, 0, 22.0),
+        (1, 1, 16.0),
+        (2, 1, 16.0),
+        (2, 2, 18.0),
+    ),
+    income_bands=(
+        ("low", 30.0),
+        ("middle", 55.0),
+        ("high", 15.0),
+    ),
+    neighborhoods=(
+        ("village_hills", "low", 25.0),
+        ("summer_crescent_boulevard", "middle", 50.0),
+        ("market_district", "high", 25.0),
+    ),
+    job_pools=(
+        ("private_service", 45.0),
+        ("city_service", 15.0),
+        ("government", 15.0),
+        ("business_owner", 20.0),
+        ("faith_leader", 5.0),
+    ),
+    community_institutions=SyntheticPopulationRecipe().community_institutions,
+    source_notes=(
+        "Household shape and income weights are coarse placeholders for ACS/PUMS calibration.",
+        "Education-program weights are modeled separately from NCES CIP/IPEDS completion concepts.",
+        "Job-pool weights are coarse placeholders for ACS occupation and BLS employment calibration.",
+        "Neighborhood weights are local scenario placeholders until Prosock neighborhood profiles are sourced.",
+    ),
+)
 
 
 HERITAGE_NAMES: dict[str, dict[str, tuple[str, ...]]] = {
@@ -107,7 +205,7 @@ def generate_synthetic_population(
     if count < 0:
         raise ValueError("count must be non-negative")
     if recipe is None:
-        recipe = SyntheticPopulationRecipe()
+        recipe = COARSE_US_SYNTHETIC_PROFILE.as_recipe()
     specs: list[FamilyGenerationSpec] = []
     remaining = count
     household_index = 0
@@ -142,7 +240,14 @@ def generate_synthetic_population(
         )
         remaining -= adults + children
         household_index += 1
-    return generate_family_population(tuple(specs))
+    population = generate_family_population(tuple(specs))
+    return GeneratedFamilyPopulation(
+        families=population.families,
+        households=population.households,
+        people=population.people,
+        organizations=population.organizations
+        + _community_organizations(population.people, recipe),
+    )
 
 
 def generate_family_population(
@@ -430,6 +535,36 @@ def _synthetic_education(income_band: str, index: int) -> str:
         case _:
             choices = (("high_school", 70.0), ("trade", 25.0), ("college", 5.0))
     return _weighted_label(choices, index)
+
+
+def _community_organizations(
+    people: tuple[PersonAgent, ...],
+    recipe: SyntheticPopulationRecipe,
+) -> tuple[OrganizationAgent, ...]:
+    counts: dict[str, int] = {}
+    for person in people:
+        for culture in person.identity.cultures:
+            counts[culture] = counts.get(culture, 0) + 1
+    organizations: list[OrganizationAgent] = []
+    for template in recipe.community_institutions:
+        culture_count = counts.get(template.culture, 0)
+        if culture_count < template.min_people:
+            continue
+        organizations.append(
+            OrganizationAgent(
+                _agent_id(template.culture, template.display_name),
+                organization_type=template.organization_type,
+                sector=template.sector,
+                display_name=f"{template.culture.title()} {template.display_name}",
+                staff=1,
+                customer_types=("congregants", "residents"),
+                notes=(
+                    f"serves {template.culture} community",
+                    f"leader role: {template.leader_role}",
+                ),
+            )
+        )
+    return tuple(organizations)
 
 
 def _weighted_label(values: tuple[tuple[str, float], ...], index: int) -> str:

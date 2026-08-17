@@ -15,10 +15,12 @@ from city_simulator.agents import (
 )
 from city_simulator.derived import active_delayed_effects
 from city_simulator.person_generator import (
+    COARSE_US_SYNTHETIC_PROFILE,
     FamilyGenerationSpec,
     GeneratedFamily,
     GeneratedFamilyPopulation,
     SyntheticPopulationRecipe,
+    SyntheticPopulationSourceProfile,
     generate_family_agents,
     generate_family_population,
     generate_synthetic_population,
@@ -69,6 +71,7 @@ from city_simulator.work_catalog import (
 
 __all__ = [
     "ANNUAL_TURN_STEPS",
+    "COARSE_US_SYNTHETIC_PROFILE",
     "AdoptionIdentity",
     "Agent",
     "BusinessType",
@@ -105,6 +108,7 @@ __all__ = [
     "PopulationStructureView",
     "PressureLedger",
     "SyntheticPopulationRecipe",
+    "SyntheticPopulationSourceProfile",
     "TradeSchoolProgram",
     "View",
     "YearResult",

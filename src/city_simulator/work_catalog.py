@@ -139,6 +139,64 @@ GOVERNMENT_JOBS: tuple[JobTemplate, ...] = (
 )
 
 
+FAITH_LEADER_JOBS: tuple[JobTemplate, ...] = (
+    JobTemplate(
+        role="rabbi",
+        employment_status="employed",
+        income_band="middle",
+        employer_type="religious_institution",
+        sector="faith_community",
+        serves=("congregants", "residents"),
+        organization_type="religious_institution",
+        min_age=28,
+        required_education="graduate",
+        min_experience_years=2,
+        entry_income_band="middle",
+        experienced_income_band="high",
+    ),
+    JobTemplate(
+        role="priest",
+        employment_status="employed",
+        income_band="middle",
+        employer_type="religious_institution",
+        sector="faith_community",
+        serves=("congregants", "residents"),
+        organization_type="religious_institution",
+        min_age=28,
+        required_education="graduate",
+        min_experience_years=2,
+        entry_income_band="middle",
+        experienced_income_band="high",
+    ),
+    JobTemplate(
+        role="imam",
+        employment_status="employed",
+        income_band="middle",
+        employer_type="religious_institution",
+        sector="faith_community",
+        serves=("congregants", "residents"),
+        organization_type="religious_institution",
+        min_age=28,
+        required_education="graduate",
+        min_experience_years=2,
+        entry_income_band="middle",
+        experienced_income_band="high",
+    ),
+    JobTemplate(
+        role="bishop",
+        employment_status="employed",
+        income_band="high",
+        employer_type="religious_institution",
+        sector="faith_community",
+        serves=("congregants", "religious_institutions"),
+        organization_type="religious_institution",
+        min_age=45,
+        required_education="graduate",
+        min_experience_years=15,
+    ),
+)
+
+
 COLLEGE_PROGRAMS: tuple[CollegeProgram, ...] = (
     CollegeProgram(
         major="business administration",
@@ -655,6 +713,7 @@ JOB_POOLS: dict[str, tuple[JobTemplate, ...]] = {
     "government": GOVERNMENT_JOBS,
     "private_service": PRIVATE_SERVICE_JOBS,
     "business_owner": BUSINESS_OWNER_JOBS,
+    "faith_leader": FAITH_LEADER_JOBS,
 }
 
 
