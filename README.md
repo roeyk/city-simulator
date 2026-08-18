@@ -99,6 +99,15 @@ Create a starter city with demographic prompts:
 PYTHONPATH=src python3 -m city_simulator init-city my-city --wizard
 ```
 
+Create a deterministic synthetic test city with generated people, households,
+organizations, sector balances, and inventories:
+
+```bash
+PYTHONPATH=src python3 -m city_simulator init-city synthetic-test \
+  --synthetic \
+  --people 30
+```
+
 Run one scenario against a city:
 
 ```bash
@@ -216,6 +225,12 @@ industrial districts, office districts, government districts, and neighborhoods.
 The generated city also includes `cohort_profiles`, a generic place for nested
 cohort attributes such as age-by-income, religion-by-religiosity, workforce
 class, and future cultural or ethnic cohort breakdowns.
+
+The synthetic city generator is aimed at simulator testing rather than civic
+calibration. It produces deterministic people, households, language profiles,
+business/community organizations, anchor institutions, sector market balances,
+and inventory records so new turn mechanics can be exercised with one city
+file.
 
 City files can also include topological neighborhood and housing data. This is
 not a map system: neighborhoods are named records with size, land-use mix,

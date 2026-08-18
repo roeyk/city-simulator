@@ -61,6 +61,7 @@ from city_simulator.person_generator import (
 )
 from city_simulator.scenario import ScenarioError, load_city, load_scenario
 from city_simulator.starter import STARTER_PRESETS, starter_city, write_starter_city
+from city_simulator.synthetic_city import generate_synthetic_city
 from city_simulator.views import (
     InventoryStatusView,
     LanguageAccessView,
@@ -147,6 +148,7 @@ __all__ = [
     "generate_family_agents",
     "generate_family_population",
     "generate_representative_citizens",
+    "generate_synthetic_city",
     "generate_synthetic_population",
     "job_template_for",
     "language_service_access_score",

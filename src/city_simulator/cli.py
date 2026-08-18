@@ -26,6 +26,7 @@ from city_simulator.starter import (
     write_starter_city,
 )
 from city_simulator.storage import city_path, ensure_data_dirs, saved_cities
+from city_simulator.synthetic_city import generate_synthetic_city
 
 
 class SimulationReport(TypedDict):
@@ -54,7 +55,14 @@ def build_parser() -> argparse.ArgumentParser:
     init_parser.add_argument("path", help="destination JSON file")
     init_parser.add_argument("--preset", choices=sorted(STARTER_PRESETS), default="balanced")
     init_parser.add_argument("--population", type=float)
-    init_parser.add_argument("--wizard", action="store_true", help="ask demographic questions")
+    init_mode = init_parser.add_mutually_exclusive_group()
+    init_mode.add_argument(
+        "--synthetic",
+        action="store_true",
+        help="write a deterministic synthetic test city with people, households, organizations, and supply data",
+    )
+    init_parser.add_argument("--people", type=int, default=30, help="synthetic people to generate")
+    init_mode.add_argument("--wizard", action="store_true", help="ask demographic questions")
 
     _add_run_arguments(parser)
     return parser
@@ -96,13 +104,17 @@ def main(argv: list[str] | None = None) -> int:
                 with destination.open("w", encoding="utf-8") as handle:
                     json.dump(asdict(city), handle, indent=2)
                     handle.write("\n")
+            elif args.synthetic:
+                city = generate_synthetic_city(args.people)
+                save_city(args.path, city)
             else:
                 city = write_starter_city(args.path, args.preset, args.population)
         except ValueError as exc:
             print(f"city-simulator: {exc}")
             return 2
+        city_kind = "synthetic" if args.synthetic else args.preset
         print(
-            f"Wrote {args.preset} city to {city_path(args.path)} "
+            f"Wrote {city_kind} city to {city_path(args.path)} "
             f"with population {city.population:,.0f}"
         )
         return 0
