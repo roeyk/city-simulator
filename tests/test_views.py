@@ -5,9 +5,14 @@ from city_simulator import (
     CityState,
     Demographics,
     HouseholdAgent,
+    LanguageAccessView,
+    LanguageProfile,
+    LanguageSkill,
     OrganizationAgent,
     PersonAgent,
     PopulationStructureView,
+    ServiceLanguage,
+    language_service_access_score,
 )
 
 
@@ -117,3 +122,143 @@ def test_agent_types_share_identity_and_weight():
     assert person.weight == 1
     assert household.weight == 12
     assert organization.weight == 3
+
+
+def test_language_service_access_scores_direct_overlap():
+    person = PersonAgent(
+        "person-1",
+        household_id="household-1",
+        age=34,
+        income_band="middle",
+        language_profile=LanguageProfile(
+            skills=(LanguageSkill("spanish", spoken_proficiency="native"),)
+        ),
+    )
+    organization = OrganizationAgent(
+        "org-1",
+        organization_type="clinic",
+        service_languages=(
+            ServiceLanguage("spanish", service_proficiency="professional"),
+        ),
+    )
+
+    assert language_service_access_score(person, organization) == 75
+
+
+def test_language_service_access_uses_interpreter_capacity_as_bridge():
+    person = PersonAgent(
+        "person-1",
+        household_id="household-1",
+        age=34,
+        income_band="middle",
+        language_profile=LanguageProfile(
+            skills=(LanguageSkill("english", spoken_proficiency="basic"),),
+            interpreter_needed=True,
+        ),
+    )
+    without_interpreter = OrganizationAgent(
+        "org-1",
+        organization_type="public_agency",
+        service_languages=(
+            ServiceLanguage("english", service_proficiency="professional"),
+        ),
+    )
+    with_interpreter = OrganizationAgent(
+        "org-2",
+        organization_type="public_agency",
+        service_languages=(
+            ServiceLanguage(
+                "english",
+                service_proficiency="professional",
+                interpreter_capacity=2,
+            ),
+        ),
+    )
+
+    assert language_service_access_score(person, without_interpreter) == 25
+    assert language_service_access_score(person, with_interpreter) == 70
+
+
+def test_language_service_access_scores_no_overlap_low():
+    person = PersonAgent(
+        "person-1",
+        household_id="household-1",
+        age=34,
+        income_band="middle",
+        language_profile=LanguageProfile(
+            skills=(LanguageSkill("amharic", spoken_proficiency="native"),)
+        ),
+    )
+    organization = OrganizationAgent(
+        "org-1",
+        organization_type="bank",
+        service_languages=(
+            ServiceLanguage("english", service_proficiency="professional"),
+        ),
+    )
+
+    assert language_service_access_score(person, organization) == 0
+
+
+def test_language_access_view_rolls_up_people_and_service_languages():
+    state = CityState(
+        people=(
+            PersonAgent(
+                "person-1",
+                household_id="household-1",
+                age=34,
+                income_band="middle",
+                weight=10,
+                language_profile=LanguageProfile(
+                    skills=(
+                        LanguageSkill("english", spoken_proficiency="professional"),
+                        LanguageSkill("spanish", spoken_proficiency="professional"),
+                    )
+                ),
+            ),
+            PersonAgent(
+                "person-2",
+                household_id="household-2",
+                age=42,
+                income_band="low",
+                weight=30,
+                language_profile=LanguageProfile(
+                    skills=(LanguageSkill("amharic", spoken_proficiency="native"),),
+                    interpreter_needed=True,
+                ),
+            ),
+        ),
+        organizations=(
+            OrganizationAgent(
+                "org-1",
+                organization_type="clinic",
+                service_languages=(
+                    ServiceLanguage("english", service_proficiency="professional"),
+                    ServiceLanguage("spanish", service_proficiency="professional"),
+                ),
+            ),
+            OrganizationAgent(
+                "org-2",
+                organization_type="market",
+            ),
+        ),
+    )
+
+    view = LanguageAccessView.derive(state)
+
+    assert view.name == "language_access"
+    assert view.source_dependencies == ("people", "organizations")
+    assert view.total_people_weight == 40
+    assert view.organizations_with_service_languages == 1
+    assert isclose(view.average_service_access_score, 18.75)
+    assert isclose(view.limited_access_share, 0.75)
+    assert isclose(view.interpreter_need_share, 0.75)
+    assert isclose(view.multilingual_bridge_share, 0.25)
+    assert set(view.as_dict()) == {
+        "total_people_weight",
+        "organizations_with_service_languages",
+        "average_service_access_score",
+        "limited_access_share",
+        "interpreter_need_share",
+        "multilingual_bridge_share",
+    }

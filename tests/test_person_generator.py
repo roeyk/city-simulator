@@ -91,8 +91,11 @@ def test_generate_family_agents_supports_dmv_heritage_name_banks():
         assert family.household.agent_id
         assert len(family.people) == 2
         assert family.people[0].identity.cultures == (expected_culture,)
+        assert family.people[0].identity.affiliations[0].culture == expected_culture
+        assert family.people[0].identity.affiliations[0].strength == 1.0
         assert family.people[0].identity.languages
         assert family.people[1].identity.cultures == (expected_culture,)
+        assert family.people[1].identity.strength_for(expected_culture) == 1.0
 
 
 def test_generate_family_agents_accepts_common_heritage_aliases():
@@ -105,11 +108,16 @@ def test_generate_family_agents_accepts_common_heritage_aliases():
     assert misspelled_cameroonian.people[0].identity.cultures == ("cameroonian",)
 
 
-def test_language_model_currently_tracks_language_presence_not_proficiency():
+def test_generated_family_derives_language_profile_from_heritage_languages():
     family = generate_family_agents("haitian", adults=1)
 
     assert family.people[0].identity.languages == ("haitian_creole", "french")
     assert not hasattr(family.people[0].identity, "language_proficiency")
+    assert family.people[0].language_profile.languages == ("haitian_creole", "french")
+    assert family.people[0].language_profile.preferred_language == "haitian_creole"
+    haitian_creole = family.people[0].language_profile.skill_for("haitian_creole")
+    assert haitian_creole is not None
+    assert haitian_creole.spoken_proficiency == "native"
 
 
 def test_adopted_child_keeps_birth_identity_but_uses_raised_culture_name():
@@ -125,6 +133,7 @@ def test_adopted_child_keeps_birth_identity_but_uses_raised_culture_name():
 
     assert child.display_name == "Morty Jones"
     assert child.identity.cultures == ("anglo",)
+    assert child.identity.strength_for("anglo") == 1.0
     assert child.adoption.is_adopted
     assert child.adoption.birth_parent_ethnicities == ("hispanic", "jewish")
     assert child.adoption.birth_parent_cultures == ("hispanic", "jewish")

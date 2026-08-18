@@ -1,333 +1,311 @@
 # Turn Model
 
-Last updated: 2026-08-16
+Last updated: 2026-08-18
 
-City Simulator advances in yearly turns. A turn should be understandable as a
-sequence of civic changes, not a black-box formula.
+City Simulator advances in yearly turns. A turn should be understandable as an
+ordered sequence of civic changes, not a black-box formula.
 
-The yearly turn is the public resolution for scenario comparison, but it does
-not require every cause to be averaged into one annual value. A turn can contain
-representative seasonal periods and bounded feedback passes before committing
-the next yearly state.
+The current source implementation exposes the annual pipeline as
+`ANNUAL_TURN_STEPS`. Each step has a stable name plus declared `requires` and
+`produces` fields so dependencies remain visible as the model grows.
+
+For the broader design process for adding new turn domains, see
+[`TURN_PROCESS_MODEL.md`](TURN_PROCESS_MODEL.md).
 
 ## Turn Inputs
 
 Each turn starts from:
 
-- the current city state;
-- one city policy package;
-- outside controls from county, state, and country;
-- model parameters that hold tunable formula coefficients;
-- city sensitivity traits that modify how strongly the city reacts to pressures;
+- the current `CityState`;
+- one `CityPolicy`;
+- `ExternalControls` from county, state, country, and regional context;
+- `ModelParameters` for formula coefficients;
+- city sensitivity traits;
 - previous active issues;
-- optional representative citizen records.
+- pending delayed effects;
+- optional people, households, organizations, neighborhoods, and place assets.
+
+## Current Source Order
+
+The current annual turn order is:
+
+```text
+validate_inputs
+-> local_fiscal_policy
+-> development_and_jobs
+-> infrastructure_environment
+-> seasonal_signals
+-> satisfaction_migration_demographics
+-> labor_market
+-> sentiment
+-> commit_state
+-> detect_issues
+```
 
 ## Turn Phases
 
-The source implementation exposes the annual pipeline as `ANNUAL_TURN_STEPS`.
-Each step has a stable name plus declared `requires` and `produces` fields so
-future systems can add causal layers without hiding the turn order inside one
-large function.
+### 1. Validate Inputs
 
-1. Outside pressure
+Validates policy bounds and captures the previous active issues so the report
+can later identify which issues were overcome.
 
-   County, state, and country inputs affect the city before local outcomes are
-   calculated. Examples include intergovernmental funding, housing directives,
-   state service or environment mandates, national interest rates, growth
-   pressure, and national unemployment pressure.
+Produces:
 
-2. Local fiscal policy
+- `previous_issues`
 
-   City taxes and the tax base produce revenue. City spending, baseline resident
-   service cost, and financing cost produce expenses. The budget is updated.
+### 2. Local Fiscal Policy
 
-3. Development and jobs
+Computes city revenue, expenses, and budget from tax policy, tax base, service
+costs, investments, debt service, and outside funding.
 
-   Housing investment, county housing directives, zoning restrictiveness,
-   permitting speed, and development restrictions determine new housing units.
-   Business support, infrastructure quality, taxes, development restrictions,
-   and national unemployment pressure determine job change.
+Produces:
 
-4. Labor market
+- `revenue`
+- `expenses`
+- `budget`
 
-   The city distinguishes jobs located in the city from resident employment.
-   Working-age population produces a labor force through participation rates.
-   Residents fill the city jobs they can realistically access, while mismatch
-   can leave both unemployed residents and unfilled jobs. The turn also derives
-   job vacancies, commuters into the city, commuters out of the city, and the
-   unemployment rate. In the current aggregate implementation, this named step
-   runs after migration and demographics so it uses the same post-turn
-   population and cohort totals that are committed into the next state.
+### 3. Development And Jobs
 
-5. Infrastructure and environment
+Computes housing and job changes from housing investment, county directives,
+zoning, permitting speed, development restrictions, business support,
+infrastructure quality, tax drag, and national unemployment effects.
 
-   Transit and services improve infrastructure while annual wear lowers it.
-   Population and job growth add pollution pressure. City environment spending
-   and state environmental mandates reduce pollution. Seasonal pressures such
-   as heat, snow, storms, drought, flooding, smoke, pests, or allergy seasons
-   should be represented as sub-annual exposure profiles that roll into the
-   yearly result.
+Produces:
 
-6. Satisfaction and migration
+- `housing_units`
+- `jobs_delta`
+- `jobs`
 
-   Satisfaction responds to services, infrastructure, taxes, pollution, housing
-   pressure, restrictions, and budget stress. Population then changes through
-   satisfaction, housing drag, local influx/outflux rates, federal growth
-   pressure, tax migration drag, and development restrictions.
+### 4. Infrastructure And Environment
 
-7. Demographics
+Updates infrastructure and pollution. Transit and service investment improve
+infrastructure; annual wear lowers it. Population and job growth add pollution;
+environment spending and state mandates reduce pollution.
 
-   Age and income cohorts advance from the new population total. For now this is
-   aggregate and deterministic; richer cohort mechanics should come later.
+Requires:
 
-8. Labor market
+- `jobs_delta`
 
-   Resident employment, unemployment, vacancies, commuters, and labor force
-   participation are derived as explicit annual turn outputs before sentiment
-   and final metrics are committed.
+Produces:
 
-9. Sentiment
+- `infrastructure`
+- `pollution`
 
-   Public sentiment is derived from multiple signals rather than copied from
-   satisfaction. Current signal channels include surveys, migration behavior,
-   business behavior, consumer spending, savings security, housing stress,
-   safety, services, civic trust, and future confidence. The annual turn exposes
-   crime, the sentiment signal map, and the final public sentiment score as
-   named intermediates before the new state is committed.
+### 5. Seasonal Signals
 
-10. Issues and resolutions
+Computes the housing gap and builds the `SignalLedger` for the turn.
 
-   The simulator detects active issues from the new city state and compares them
-   with the previous year's issues to identify what was overcome. If an
-   internal feedback loop does not stabilize within the annual turn's capped
-   feedback passes, the unresolved cascade should become an active issue or
-   model warning rather than being silently hidden.
+Current signal concepts:
 
-11. Citizen histories
+- `seasonal_heat_cascade`
+- `language_service_access`
 
-   Optional representative citizen records age by one year, update employment
-   and housing status, and append a story line describing how the turn affected
-   them.
+The signal system is intentionally broader than pressure. A signal can be a
+need, flow, capacity, balance, risk, buffer, service gap, import dependency, or
+pressure. Domain modules should add modular `SignalConcept` collectors rather
+than hard-coding every channel into the turn step.
 
-12. Report
+Requires:
 
-   The turn produces a `YearResult`: updated state, revenue, expenses,
-   population delta, jobs delta, housing gap, active issues, and overcome
-   issues. The updated state also tracks city metrics such as happiness, crime,
-   growth rate, labor force, resident employment, unemployment, job vacancies,
-   commuters, housing pressure, density, and service coverage.
+- `housing_units`
+- `infrastructure`
+- `pollution`
 
-## Internal Turn Resolution
+Produces:
 
-The current game turn is one year. Inside that year, the simulator may evaluate
-representative sub-periods such as winter, spring, summer, fall, weekday peaks,
-weekends, nighttime operations, school terms, event seasons, or emergency
-periods. These internal periods are not player-visible turns yet; they are a
-way to preserve timing and seasonality while keeping annual scenario comparison
-simple.
+- `housing_gap`
+- `signal_ledger`
 
-Turn order is part of the model, not an implementation accident. Policies and
-events should enter the annual turn through ordered steps that produce named
-intermediate signals. Later steps consume those signals, which means changing
-the order can legitimately change downstream outcomes. That behavior should be
-visible in `ANNUAL_TURN_STEPS`, tested through step dependencies, and explained
-in reports when it drives a major result.
+### 6. Satisfaction, Migration, And Demographics
 
-Events should avoid directly mutating final headline metrics when an
-intermediate channel can explain the path. For example, a heat wave should
-produce cooling demand, grid load, grid shortfall, healthcare surge, business
-disruption, or civic trust risk before later phases derive satisfaction,
-sentiment, active issues, or delayed effects.
+Computes satisfaction, population change, the new population total, updated
+demographic cohorts, and growth rate. Satisfaction responds to services,
+infrastructure, taxes, pollution, housing gap, restrictions, and budget stress.
+Population responds to satisfaction, housing drag, local influx/outflux rates,
+federal growth effects, tax migration drag, and development restrictions.
 
-Seasonal climate should be modeled this way. For example, a severe summer heat
-profile can increase air-conditioning demand, stress the electric grid, create
-brownouts, increase heat illness among seniors or other vulnerable groups,
-raise EMS and hospital load, damage public trust, and increase political unrest.
-The annual result should report the causal chain rather than only showing a
-generic decline in satisfaction.
+Requires:
 
-Some systems also need feedback. A simple one-pass sequence such as
-`climate -> grid -> health -> unrest` can miss knock-on effects where later
-layers affect earlier capacities. For example, unrest may slow emergency
-operations, stress staffing, disrupt communication, or delay cooling-center and
-grid response, which then worsens unresolved heat exposure.
+- `infrastructure`
+- `pollution`
+- `housing_gap`
 
-To handle this without switching to hourly simulation, an annual turn can use
-bounded feedback passes:
+Produces:
 
-```text
-annual turn
-  build outside, policy, seasonal, and schedule pressures
-  evaluate representative periods
-  run causal layers once
-  feed selected feedback signals into dependent layers
-  repeat until stable or until a small fixed pass limit is reached
-  commit the yearly state and report the causal chain
-```
+- `satisfaction`
+- `population_delta`
+- `population`
+- `demographics`
+- `growth_rate`
 
-Feedback signals should be named intermediate values, not hidden side effects.
-Examples include grid shortfall, blackout hours, healthcare surge, excess
-deaths, civic trust loss, unrest pressure, emergency response delay, staffing
-disruption, business interruption, service backlog, and communication failure.
-The current source implementation exposes these in-turn intermediates through a
-`PressureLedger` on `YearResult`. The first implemented slice derives a severe
-summer heat cascade from heat exposure, cooling demand, grid shortfall,
-healthcare surge, and civic trust risk.
-Signals that should persist beyond the current turn can become
-`DelayedEffect` records on `CityState.pending_effects`. A delayed effect stores
-its source, target channel, amount, delay, duration, decay, tags, and
-explanation. This is the carry-forward layer for impacts that mature over
-several turns, such as trust damage after blackouts, infrastructure repair
-backlogs, legal-aid backlog, chronic health load, or long-tail business
-disruption.
+### 7. Labor Market
+
+Computes labor force, resident employment, unemployment, job vacancies,
+commuters into the city, commuters out of the city, and participation and
+unemployment rates.
+
+The source model distinguishes jobs located in the city from resident
+employment. Future regional labor-market work should reconcile suitable local
+jobs, remote work, nearby-city jobs, relocation, and unemployment.
+
+Requires:
+
+- `population`
+- `demographics`
+- `jobs`
+- `infrastructure`
+
+Produces:
+
+- `labor_market`
+
+### 8. Sentiment
+
+Computes crime, sentiment component signals, and public sentiment.
+
+Public sentiment is derived from multiple components rather than copied from
+satisfaction. Current sentiment components include surveys, migration behavior,
+business behavior, consumer spending, savings security, housing stress, safety,
+services, civic trust, and future confidence. The step can consume
+`SignalLedger` channels such as heat, grid, healthcare, civic trust, and
+language access signals.
+
+Requires:
+
+- `jobs_delta`
+- `pollution`
+- `housing_gap`
+- `signal_ledger`
+- `satisfaction`
+- `population`
+- `demographics`
+- `growth_rate`
+- `labor_market`
+
+Produces:
+
+- `crime`
+- `sentiment_signals`
+- `public_sentiment`
+
+### 9. Commit State
+
+Builds the next `CityState`, stores the derived `CityMetrics`, advances pending
+delayed effects, and adds new delayed effects created from turn signals.
+
+Requires the fiscal, development, infrastructure, signal, satisfaction,
+population, labor, crime, and sentiment intermediates.
+
+Produces:
+
+- `next_state`
+
+### 10. Detect Issues
+
+Detects active issues from the committed next state and the turn's
+`SignalLedger`. Compares current issues against the previous issue set so
+`YearResult` can report active and overcome issues.
+
+Requires:
+
+- `next_state`
+- `signal_ledger`
+
+Produces:
+
+- `active_issues`
+
+## Turn Output
+
+`advance_year()` returns a `YearResult` containing:
+
+- year;
+- next `CityState`;
+- revenue and expenses;
+- population delta;
+- jobs delta;
+- housing gap;
+- active issues;
+- overcome issues;
+- `signal_ledger`.
+
+The committed state also includes `CityMetrics` such as happiness, public
+sentiment, crime, growth rate, labor force, employed residents, unemployed
+residents, jobs in city, vacancies, commuters, housing pressure, density, and
+service coverage.
+
+## Signal Concepts
+
+Signal collection lives in `signals.py`.
+
+Each `SignalConcept` declares:
+
+- `name`
+- `need`
+- `inputs`
+- `outputs`
+- `channels`
+- `collect`
+
+This declaration is part of the object model. A new domain should be able to
+state why it exists, which inputs it consumes, which outputs it produces, and
+which signal channels it registers.
+
+Current examples:
+
+- `seasonal_heat_cascade` consumes population, demographics, physical profile,
+  neighborhoods, service capacity, delayed effects, environmental investment,
+  infrastructure, and pollution. It emits heat exposure, cooling demand, grid
+  shortfall, healthcare surge, and civic trust risk channels.
+- `language_service_access` consumes people language profiles and organization
+  service languages. It emits service-access gap, limited-access share,
+  interpreter need, and multilingual bridge capacity channels.
+
+## Delayed Effects
+
+Signals that should persist beyond the current turn can become `DelayedEffect`
+records on `CityState.pending_effects`.
+
+A delayed effect stores:
+
+- source;
+- target channel;
+- amount;
+- delay;
+- duration;
+- decay;
+- tags;
+- explanation.
 
 Use delayed effects for intermediate channels, not as shortcuts directly to
-final headline metrics. For example:
+headline metrics.
+
+Good:
 
 ```text
-good: summer_blackout -> civic_trust / healthcare_surge / repair_backlog
-bad:  summer_blackout -> happiness -10
+summer_blackout -> civic_trust / healthcare_surge / repair_backlog
 ```
 
-If the feedback pass does not stabilize, distinguish two cases:
-
-- civic instability: a plausible cascading failure, such as heat, grid
-  shortfall, hospital overload, trust collapse, unrest, and delayed response
-  reinforcing each other;
-- model instability: coefficients or formulas are too sensitive, missing
-  damping, or exceeding plausible bounds.
-
-Civic instability should produce active issues, severity, amplifying factors,
-missing buffers, and report text. Model instability should produce a warning
-for calibration review.
-
-Shorter turns can be added later, such as monthly or quarterly turns, when
-mid-year intervention timing becomes important. Shorter turns improve timing
-but do not remove the need for feedback modeling: even a monthly turn can
-contain daily or hourly crisis dynamics. Keep the feedback machinery explicit
-and keep annual scenario reports as a supported output.
-
-## Professional Urban Simulation Benchmark Goal
-
-Professional urban simulation examples often organize a regional simulation
-around canonical tables, computed columns, named model steps, and fixed
-workflows. The useful benchmark for City Simulator is not to copy a full
-econometric or GIS stack, but to keep the same separation of concerns:
-
-- canonical state stores source facts;
-- views bundle related aggregate statistics derived from lower-level models;
-- named turn steps update or derive one part of the city at a time;
-- step order is explicit because later steps depend on earlier outputs;
-- reports consume step outputs and views rather than recomputing hidden logic.
-
-Professional land-use simulators are deeper than City Simulator currently is
-for parcel/building-level real estate, household and job location choice,
-prices/rents, development feasibility, and developer behavior. City Simulator
-is aiming at broader civic coverage: crisis cascades, public sentiment, public
-safety, services, partnerships, institutions, delayed effects, and mayor-style
-scenario briefings. Treat professional land-use simulation as the benchmark for
-the real-estate engine, not as the full scope of the game.
-
-For real estate-style work, the eventual sequence should resemble:
+Bad:
 
 ```text
-prices/rents view
-  household and business demand
-  development feasibility
-  developer/project pipeline
-  updated buildings or neighborhood market state
-  refreshed affordability, vacancy, displacement, and scenario comparison views
+summer_blackout -> happiness -10
 ```
-
-The current `ANNUAL_TURN_STEPS` registry is the first small move toward that
-pattern while preserving the annual turn and deterministic CLI behavior.
 
 ## Design Rules
 
 - Keep turns deterministic by default.
-- Keep phase effects traceable to policy or outside pressure.
-- Treat turn order as an explicit causal contract. A step should consume only
-  prior step outputs, current canonical state, policy inputs, external controls,
-  model parameters, or declared delayed effects.
-- Prefer adding named intermediate values over hiding behavior in one large
-  expression.
-- Do not use events as direct shortcuts to final metrics when a causal path can
-  be represented through intermediate signals and later turn steps.
-- Preserve feedback loops explicitly. When one layer can affect an earlier
-  capacity or a later layer through a knock-on effect, pass a named feedback
-  signal through bounded internal passes instead of assuming a single yearly
-  ordering captures the whole chain.
-- Carry delayed state explicitly. When an effect should mature later or persist
-  across turns, store it as a delayed effect with source, target, timing,
-  decay, tags, and explanation.
-- Mark variables by provenance:
-  - source state / canonical state: authoritative simulated facts;
-  - scenario input, policy control, and external pressure: values supplied to a
-    run;
-  - model parameter: tunable formula coefficient;
-  - computed intermediate: temporary value inside a turn;
-  - derived rollup: value recomputed from lower-level state;
-  - cached metric: derived value stored for reporting or compatibility;
-  - report-only output: value emitted in a `YearResult`.
-- Treat hard-coded formula weights as scaffolding. As mechanics stabilize,
-  promote important weights into named model parameters; when appropriate, let
-  those parameters become dynamic city traits that change across turns in
-  response to policy, institutions, infrastructure, market conditions, and
-  population composition.
-- Model the whole city first, but keep the data model neighborhood-ready.
-  Neighborhoods are the next useful spatial unit for housing, services, safety,
-  job access, civic assets, and sentiment. Individual city blocks should wait
-  until neighborhood-level simulation creates a clear need for that resolution.
-- Keep neighborhoods topological until maps are needed. Neighborhood records
-  should track size, land-use mix, adjacent neighborhoods, adjacent city
-  sectors, connectivity, environmental exposure, service access, housing stock,
-  and assistance capacity without requiring coordinates or polygons.
-- Use shared place assets for physical or institutional locations that can host
-  services. A place asset can represent a school, clinic, hospital, mall,
-  mixed-use building, police station, fire station, public works depot, transit
-  hub, assisted-living residence, congregation, museum, monument, or historic
-  site, bank, federal credit union, lending office, public finance office, or
-  exchange-market access institution. Embedded services let one place provide
-  several capacities, such as education, healthcare, therapy, retail,
-  recreation, exhibitions, visitor services, worship, safety response, public
-  works access, household credit, business lending, municipal finance, or
-  energy-market access.
-- Financial institution profiles should distinguish the institution from the
-  market it touches. For example, an energy derivatives exchange can give
-  energy suppliers, county distributors, large energy consumers such as
-  datacenters, and speculators access to power, natural-gas, or environmental
-  contracts for price, credit, liquidity, and basis-risk management. The
-  simulator should model those participant roles and asset classes without
-  treating the exchange as a power plant, physical dispatch system, or generic
-  bank.
-- Let places and embedded services carry operating schedules. Keep them as
-  deterministic annualized profiles for now: business-hours shops, daytime
-  weekday school terms, evening adult education, nightlife, overnight public
-  works such as street cleaning, seasonal recreation, event-only venues,
-  emergency/on-call services, and 24x7 facilities should all be representable
-  without simulating every hour.
-- Treat housing stock and housing assistance as separate concepts. Physical
-  stock includes residence types such as estate homes, rowhouses, mixed-use
-  shopfront housing, garden apartments, and high-rises. Assistance includes
-  Section 8 vouchers, shelter beds, transitional housing, permanent supportive
-  housing, and homelessness prevention capacity.
-- Treat redevelopment policies such as pinui-binui as programs that affect
-  existing stock, temporary displacement, replacement units, added density,
-  construction disruption, political trust, and long-term capacity.
-- Treat top-level metrics as derived outputs. As the city and population model
-  becomes more detailed, statistics such as population, unemployment, happiness,
-  public sentiment, crime, housing pressure, housing stress, and economic
-  confidence should be computed from underlying household, cohort, neighborhood,
-  business, labor, housing, service, and place data. A starter city or wizard
-  may accept initial values such as 100,000 residents or 5% unemployment, but
-  after turns begin those values should be derived from simulated lower-level
-  data rather than carried forward as manually controlled metrics.
-- `city.population` should eventually be a derived rollup/cache from
-  household/cohort and neighborhood residency data, not an independently
-  authoritative source field.
-- `city.metrics.housing_pressure` should be a derived metric from household
-  demand, household size, housing supply by type, vacancy, crowding,
-  rent/mortgage affordability, assistance utilization, housing condition,
-  displacement, and neighborhood distribution.
-- When adding a new scenario lever, decide which turn phase it affects.
-- When adding a new issue, decide which phase creates or resolves it.
+- Treat turn order as an explicit causal contract.
+- A step should consume only prior step outputs, current canonical state,
+  policy inputs, external controls, model parameters, or declared delayed
+  effects.
+- Prefer named intermediate values and signal channels over hidden direct
+  metric changes.
+- Add new domain behavior through views, signal concepts, and turn steps with
+  declared inputs and outputs.
+- Keep top-level metrics as derived outputs. Starter or scenario files may
+  provide initial values, but later turns should derive values from lower-level
+  state whenever practical.
+- Do not require every entity, visitor, shipment, or relationship to be fully
+  materialized before the city can run. Use aggregate fallback models and add
+  explicit records where detail matters.

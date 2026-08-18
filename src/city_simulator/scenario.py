@@ -12,6 +12,7 @@ from city_simulator.model import (
     CityRevenueSources,
     CitySensitivity,
     CityState,
+    CulturalAffiliation,
     CulturalIdentity,
     DelayedEffect,
     Demographics,
@@ -24,11 +25,14 @@ from city_simulator.model import (
     HouseholdAgent,
     HousingAssistance,
     HousingStock,
+    LanguageProfile,
+    LanguageSkill,
     Neighborhood,
     OperatingSchedule,
     OrganizationAgent,
     PersonAgent,
     PlaceAsset,
+    ServiceLanguage,
     ZoningEnvelope,
 )
 from city_simulator.storage import city_path, scenario_path
@@ -368,6 +372,10 @@ def _people_from_sequence(
             person_data.get("identity"),
             f"{item_label}.identity",
         )
+        person_data["language_profile"] = _language_profile_from_mapping(
+            person_data.get("language_profile"),
+            f"{item_label}.language_profile",
+        )
         person_data["adoption"] = _adoption_identity_from_mapping(
             person_data.get("adoption"),
             f"{item_label}.adoption",
@@ -392,7 +400,50 @@ def _cultural_identity_from_mapping(
         return CulturalIdentity()
     identity_data = dict(data)
     _tupleize(identity_data, ("ethnicities", "cultures", "languages"))
+    affiliations_data = identity_data.get("affiliations", ())
+    if not isinstance(affiliations_data, list | tuple):
+        raise ScenarioError(f"{label}.affiliations must be an array")
+    identity_data["affiliations"] = tuple(
+        _cultural_affiliation_from_mapping(value, f"{label}.affiliations[{index}]")
+        for index, value in enumerate(affiliations_data)
+    )
     return _dataclass_from_mapping(CulturalIdentity, identity_data, label)
+
+
+def _cultural_affiliation_from_mapping(data: Any, label: str) -> CulturalAffiliation:
+    if not isinstance(data, dict):
+        raise ScenarioError(f"{label} must be an object")
+    affiliation_data = dict(data)
+    _tupleize(affiliation_data, ("tags",))
+    return _dataclass_from_mapping(CulturalAffiliation, affiliation_data, label)
+
+
+def _language_profile_from_mapping(
+    data: dict[str, Any] | None,
+    label: str,
+) -> LanguageProfile:
+    if data is None:
+        return LanguageProfile()
+    if not isinstance(data, dict):
+        raise ScenarioError(f"{label} must be an object")
+    profile_data = dict(data)
+    _tupleize(profile_data, ("household_languages",))
+    skills_data = profile_data.get("skills", ())
+    if not isinstance(skills_data, list | tuple):
+        raise ScenarioError(f"{label}.skills must be an array")
+    profile_data["skills"] = tuple(
+        _language_skill_from_mapping(value, f"{label}.skills[{index}]")
+        for index, value in enumerate(skills_data)
+    )
+    return _dataclass_from_mapping(LanguageProfile, profile_data, label)
+
+
+def _language_skill_from_mapping(data: Any, label: str) -> LanguageSkill:
+    if not isinstance(data, dict):
+        raise ScenarioError(f"{label} must be an object")
+    skill_data = dict(data)
+    _tupleize(skill_data, ("learning_contexts",))
+    return _dataclass_from_mapping(LanguageSkill, skill_data, label)
 
 
 def _adoption_identity_from_mapping(
@@ -482,7 +533,10 @@ def _households_from_sequence(
         if not isinstance(value, dict):
             raise ScenarioError(f"{item_label} must be an object")
         household_data = dict(value)
-        _tupleize(household_data, ("member_ids", "debts", "assets", "notes"))
+        _tupleize(
+            household_data,
+            ("member_ids", "household_languages", "debts", "assets", "notes"),
+        )
         households.append(_dataclass_from_mapping(HouseholdAgent, household_data, item_label))
     return tuple(households)
 
@@ -498,10 +552,33 @@ def _organizations_from_sequence(
             raise ScenarioError(f"{item_label} must be an object")
         organization_data = dict(value)
         _tupleize(organization_data, ("owner_ids", "customer_types", "notes"))
+        organization_data["service_languages"] = _service_languages_from_sequence(
+            organization_data.get("service_languages", ()),
+            f"{item_label}.service_languages",
+        )
         organizations.append(
             _dataclass_from_mapping(OrganizationAgent, organization_data, item_label)
         )
     return tuple(organizations)
+
+
+def _service_languages_from_sequence(
+    data: Any,
+    label: str,
+) -> tuple[ServiceLanguage, ...]:
+    if not isinstance(data, list | tuple):
+        raise ScenarioError(f"{label} must be an array")
+    service_languages: list[ServiceLanguage] = []
+    for index, value in enumerate(data):
+        item_label = f"{label}[{index}]"
+        if not isinstance(value, dict):
+            raise ScenarioError(f"{item_label} must be an object")
+        language_data = dict(value)
+        _tupleize(language_data, ("tags",))
+        service_languages.append(
+            _dataclass_from_mapping(ServiceLanguage, language_data, item_label)
+        )
+    return tuple(service_languages)
 
 
 def _delayed_effects_from_sequence(

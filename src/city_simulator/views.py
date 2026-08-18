@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import ClassVar, TypeVar
 
-from city_simulator.agents import PersonAgent
+from city_simulator.agents import OrganizationAgent, PersonAgent, ServiceLanguage
 from city_simulator.state import CityState
 
 ViewT = TypeVar("ViewT", bound="View")
@@ -87,3 +87,103 @@ class PopulationStructureView(View):
             "high_income_share": self.high_income_share,
             "dependency_ratio": self.dependency_ratio,
         }
+
+
+def language_service_access_score(
+    person: PersonAgent,
+    organization: OrganizationAgent,
+) -> float:
+    if not organization.service_languages:
+        return 50.0
+    return max(
+        _service_language_access_score(person, service_language)
+        for service_language in organization.service_languages
+    )
+
+
+def _service_language_access_score(
+    person: PersonAgent,
+    service_language: ServiceLanguage,
+) -> float:
+    person_rank = person.language_profile.spoken_rank(service_language.language)
+    direct_score = min(person_rank, service_language.service_rank) / 4 * 100
+    if (
+        person.language_profile.interpreter_needed
+        and service_language.interpreter_capacity > 0
+        and person_rank > 0
+    ):
+        return max(direct_score, 70.0)
+    return direct_score
+
+
+@dataclass(frozen=True)
+class LanguageAccessView(View):
+    name: ClassVar[str] = "language_access"
+    source_dependencies: ClassVar[tuple[str, ...]] = ("people", "organizations")
+
+    total_people_weight: float
+    organizations_with_service_languages: float
+    average_service_access_score: float
+    limited_access_share: float
+    interpreter_need_share: float
+    multilingual_bridge_share: float
+
+    @classmethod
+    def derive(cls, state: CityState) -> LanguageAccessView:
+        return cls.derive_from_agents(state.people, state.organizations)
+
+    @classmethod
+    def derive_from_agents(
+        cls,
+        people: tuple[PersonAgent, ...],
+        organizations: tuple[OrganizationAgent, ...],
+    ) -> LanguageAccessView:
+        total_weight = sum(person.weight for person in people)
+        population = max(total_weight, 1.0)
+        service_organizations = tuple(
+            organization for organization in organizations if organization.service_languages
+        )
+        scores = tuple(
+            (person.weight, _best_service_access_score(person, service_organizations))
+            for person in people
+        )
+        weighted_score = sum(weight * score for weight, score in scores)
+        limited_access_weight = sum(
+            weight for weight, score in scores if service_organizations and score < 50
+        )
+        interpreter_need_weight = sum(
+            person.weight for person in people if person.language_profile.interpreter_needed
+        )
+        bridge_weight = sum(
+            person.weight
+            for person in people
+            if sum(1 for skill in person.language_profile.skills if skill.can_bridge()) >= 2
+        )
+        return cls(
+            total_people_weight=total_weight,
+            organizations_with_service_languages=float(len(service_organizations)),
+            average_service_access_score=weighted_score / population,
+            limited_access_share=limited_access_weight / population,
+            interpreter_need_share=interpreter_need_weight / population,
+            multilingual_bridge_share=bridge_weight / population,
+        )
+
+    def as_dict(self) -> dict[str, float]:
+        return {
+            "total_people_weight": self.total_people_weight,
+            "organizations_with_service_languages": self.organizations_with_service_languages,
+            "average_service_access_score": self.average_service_access_score,
+            "limited_access_share": self.limited_access_share,
+            "interpreter_need_share": self.interpreter_need_share,
+            "multilingual_bridge_share": self.multilingual_bridge_share,
+        }
+
+
+def _best_service_access_score(
+    person: PersonAgent,
+    organizations: tuple[OrganizationAgent, ...],
+) -> float:
+    return max(
+        (language_service_access_score(person, organization) for organization in organizations),
+        default=50.0,
+    )

@@ -1,19 +1,170 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+from dataclasses import dataclass
+
 from city_simulator.derived import _active_effect_amount, _density, _service_coverage
-from city_simulator.state import CityPolicy, CityState, DelayedEffect, PressureLedger
+from city_simulator.state import CityPolicy, CityState, DelayedEffect, SignalLedger
+from city_simulator.views import LanguageAccessView
+
+DRIVER_BASELINE = "baseline_dynamics"
+DRIVER_DELAYED_EFFECTS = "delayed_effects"
+DRIVER_ENVIRONMENT = "environment_seasonality"
+DRIVER_FEEDBACK = "feedback_loop"
+DRIVER_INSTITUTIONAL = "institutional_behavior"
+DRIVER_POLICY = "policy"
+DRIVER_REGIONAL = "regional_spillover"
+DRIVER_RESIDENT = "resident_household_behavior"
+DRIVER_MARKET = "market_forces"
+DRIVER_SUPPLY_CHAIN = "supply_chain"
 
 
-def _seasonal_pressure_ledger(
+@dataclass(frozen=True)
+class SignalContext:
+    state: CityState
+    policy: CityPolicy
+    infrastructure: float
+    pollution: float
+
+
+@dataclass(frozen=True)
+class SignalConcept:
+    name: str
+    need: str
+    inputs: tuple[str, ...]
+    outputs: tuple[str, ...]
+    channels: tuple[str, ...]
+    collect: Callable[[SignalContext, SignalLedger], None]
+
+
+def signal_ledger_for_turn(context: SignalContext) -> SignalLedger:
+    ledger = SignalLedger()
+    for concept in SIGNAL_CONCEPTS:
+        concept.collect(context, ledger)
+    return ledger
+
+
+def add_seasonal_signals(context: SignalContext, ledger: SignalLedger) -> None:
+    _add_seasonal_signals(
+        ledger=ledger,
+        state=context.state,
+        policy=context.policy,
+        infrastructure=context.infrastructure,
+        pollution=context.pollution,
+    )
+
+
+def add_language_access_signals(context: SignalContext, ledger: SignalLedger) -> None:
+    state = context.state
+    if not state.people or not any(
+        organization.service_languages for organization in state.organizations
+    ):
+        return
+    view = LanguageAccessView.derive(state)
+    access_gap = max(50.0 - view.average_service_access_score, 0.0)
+    if access_gap > 0:
+        ledger.add(
+            "language_service_access_gap",
+            access_gap,
+            "Language gaps reduce practical access to organizations with declared service languages.",
+            driver_categories=(DRIVER_RESIDENT, DRIVER_INSTITUTIONAL),
+        )
+    if view.limited_access_share > 0:
+        ledger.add(
+            "language_limited_access",
+            view.limited_access_share * 100,
+            "Residents with low language overlap face practical service-access barriers.",
+            driver_categories=(DRIVER_RESIDENT, DRIVER_INSTITUTIONAL),
+        )
+    if view.interpreter_need_share > 0:
+        ledger.add(
+            "interpreter_need",
+            view.interpreter_need_share * 100,
+            "Residents needing interpreters require language-access capacity from public and service organizations.",
+            driver_categories=(DRIVER_RESIDENT, DRIVER_INSTITUTIONAL),
+        )
+    if view.multilingual_bridge_share > 0:
+        ledger.add(
+            "multilingual_bridge_capacity",
+            view.multilingual_bridge_share * 100,
+            "Multilingual residents can bridge households, services, employers, and community organizations.",
+            driver_categories=(DRIVER_RESIDENT, DRIVER_INSTITUTIONAL),
+        )
+
+
+SIGNAL_CONCEPTS: tuple[SignalConcept, ...] = (
+    SignalConcept(
+        name="seasonal_heat_cascade",
+        need=(
+            "Expose heat, cooling demand, grid, healthcare, and civic-trust signals "
+            "before delayed effects or headline metrics consume them."
+        ),
+        inputs=(
+            "state.population",
+            "state.demographics",
+            "state.physical_profile",
+            "state.neighborhoods",
+            "state.service_capacity",
+            "state.pending_effects",
+            "policy.environment_investment",
+            "infrastructure",
+            "pollution",
+        ),
+        outputs=("SignalLedger", "DelayedEffect candidates"),
+        channels=(
+            "summer_heat_exposure",
+            "cooling_demand",
+            "grid_shortfall",
+            "healthcare_surge",
+            "civic_trust_risk",
+        ),
+        collect=add_seasonal_signals,
+    ),
+    SignalConcept(
+        name="language_service_access",
+        need=(
+            "Expose service-access gaps between resident language profiles and "
+            "organization service-language capacity without directly changing headlines."
+        ),
+        inputs=("state.people.language_profile", "state.organizations.service_languages"),
+        outputs=("SignalLedger",),
+        channels=(
+            "language_service_access_gap",
+            "language_limited_access",
+            "interpreter_need",
+            "multilingual_bridge_capacity",
+        ),
+        collect=add_language_access_signals,
+    ),
+)
+
+def _seasonal_signal_ledger(
     state: CityState,
     policy: CityPolicy,
     infrastructure: float,
     pollution: float,
-) -> PressureLedger:
-    ledger = PressureLedger()
+) -> SignalLedger:
+    ledger = SignalLedger()
+    _add_seasonal_signals(
+        ledger=ledger,
+        state=state,
+        policy=policy,
+        infrastructure=infrastructure,
+        pollution=pollution,
+    )
+    return ledger
+
+
+def _add_seasonal_signals(
+    ledger: SignalLedger,
+    state: CityState,
+    policy: CityPolicy,
+    infrastructure: float,
+    pollution: float,
+) -> None:
     heat_exposure = _summer_heat_exposure(state, pollution)
     if heat_exposure <= 0:
-        return ledger
+        return
 
     seniors_share = state.demographics.seniors / max(state.population, 1.0)
     cooling_demand = heat_exposure * (1.0 + seniors_share * 1.8) * state.population / 100_000
@@ -31,28 +182,32 @@ def _seasonal_pressure_ledger(
         "summer_heat_exposure",
         heat_exposure,
         "Summer heat exposure comes from climate profile, pollution, density, and active heat effects.",
+        driver_categories=(DRIVER_ENVIRONMENT, DRIVER_BASELINE, DRIVER_DELAYED_EFFECTS),
     )
     ledger.add(
         "cooling_demand",
         cooling_demand,
         "Cooling demand increases with heat exposure, population, and senior vulnerability.",
+        driver_categories=(DRIVER_ENVIRONMENT, DRIVER_RESIDENT),
     )
     ledger.add(
         "grid_shortfall",
         max(grid_shortfall - mitigation, 0.0),
         "Cooling demand exceeds grid resilience after policy mitigation.",
+        driver_categories=(DRIVER_ENVIRONMENT, DRIVER_INSTITUTIONAL, DRIVER_POLICY),
     )
     ledger.add(
         "healthcare_surge",
         healthcare_surge,
         "Heat exposure and grid shortfall increase EMS and hospital load.",
+        driver_categories=(DRIVER_ENVIRONMENT, DRIVER_INSTITUTIONAL),
     )
     ledger.add(
         "civic_trust_risk",
         max(civic_trust_risk - mitigation, 0.0),
         "Visible outages and health-system stress create civic trust risk.",
+        driver_categories=(DRIVER_FEEDBACK, DRIVER_ENVIRONMENT, DRIVER_POLICY),
     )
-    return ledger
 
 
 def _summer_heat_exposure(state: CityState, pollution: float) -> float:
@@ -125,7 +280,7 @@ def _healthcare_surge(
     return max(heat_exposure * 0.35 + grid_shortfall * 0.65 + delayed_surge - capacity_buffer, 0.0)
 
 
-def _delayed_effects_from_pressures(ledger: PressureLedger) -> tuple[DelayedEffect, ...]:
+def _delayed_effects_from_signals(ledger: SignalLedger) -> tuple[DelayedEffect, ...]:
     effects: list[DelayedEffect] = []
     grid_shortfall = ledger.get("grid_shortfall")
     healthcare_surge = ledger.get("healthcare_surge")

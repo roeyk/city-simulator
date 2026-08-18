@@ -3,14 +3,18 @@
 from city_simulator.agents import (
     AdoptionIdentity,
     Agent,
+    CulturalAffiliation,
     CulturalIdentity,
     EducationCompletion,
     EducationHistory,
     EmploymentRecord,
     HouseholdAgent,
+    LanguageProfile,
+    LanguageSkill,
     LivingConditions,
     OrganizationAgent,
     PersonAgent,
+    ServiceLanguage,
     living_conditions_for,
 )
 from city_simulator.citizens import (
@@ -36,7 +40,7 @@ from city_simulator.model import (
     Neighborhood,
     OperatingSchedule,
     PlaceAsset,
-    PressureLedger,
+    SignalLedger,
     YearResult,
     ZoningEnvelope,
     active_delayed_effects,
@@ -55,7 +59,12 @@ from city_simulator.person_generator import (
 )
 from city_simulator.scenario import ScenarioError, load_city, load_scenario
 from city_simulator.starter import STARTER_PRESETS, starter_city, write_starter_city
-from city_simulator.views import PopulationStructureView, View
+from city_simulator.views import (
+    LanguageAccessView,
+    PopulationStructureView,
+    View,
+    language_service_access_score,
+)
 from city_simulator.work_catalog import (
     BusinessType,
     CollegeProgram,
@@ -85,6 +94,7 @@ __all__ = [
     "CitySensitivity",
     "CityState",
     "CollegeProgram",
+    "CulturalAffiliation",
     "CulturalIdentity",
     "DelayedEffect",
     "Demographics",
@@ -101,6 +111,9 @@ __all__ = [
     "HousingStock",
     "Issue",
     "JobTemplate",
+    "LanguageAccessView",
+    "LanguageProfile",
+    "LanguageSkill",
     "LivingConditions",
     "ModelParameters",
     "Neighborhood",
@@ -109,8 +122,9 @@ __all__ = [
     "PersonAgent",
     "PlaceAsset",
     "PopulationStructureView",
-    "PressureLedger",
     "ScenarioError",
+    "ServiceLanguage",
+    "SignalLedger",
     "SyntheticPopulationRecipe",
     "SyntheticPopulationSourceProfile",
     "TradeSchoolProgram",
@@ -129,6 +143,7 @@ __all__ = [
     "generate_representative_citizens",
     "generate_synthetic_population",
     "job_template_for",
+    "language_service_access_score",
     "living_conditions_for",
     "load_city",
     "load_scenario",

@@ -10,9 +10,10 @@ from city_simulator.metrics import (
     _public_sentiment,
     _sentiment_signals,
 )
-from city_simulator.pressures import (
-    _delayed_effects_from_pressures,
-    _seasonal_pressure_ledger,
+from city_simulator.signals import (
+    SignalContext,
+    _delayed_effects_from_signals,
+    signal_ledger_for_turn,
 )
 from city_simulator.state import (
     CityPolicy,
@@ -23,7 +24,7 @@ from city_simulator.state import (
     ExternalControls,
     Issue,
     ModelParameters,
-    PressureLedger,
+    SignalLedger,
     YearResult,
 )
 from city_simulator.turn_steps import AnnualTurnContext, TurnStep, run_turn_steps
@@ -80,17 +81,17 @@ def advance_year(
         housing_gap=_required(context.housing_gap, "housing_gap"),
         active_issues=context.active_issues,
         overcome_issues=_overcome_issues(context.previous_issues, context.active_issues),
-        pressure_ledger=_required(context.pressure_ledger, "pressure_ledger"),
+        signal_ledger=_required(context.signal_ledger, "signal_ledger"),
     )
 
 
 def detect_issues(
     state: CityState,
     parameters: ModelParameters | None = None,
-    pressure_ledger: PressureLedger | None = None,
+    signal_ledger: SignalLedger | None = None,
 ) -> list[Issue]:
     model_parameters = parameters or ModelParameters()
-    ledger = pressure_ledger or PressureLedger()
+    ledger = signal_ledger or SignalLedger()
     issues: list[Issue] = []
     housing_gap = state.population / 2.35 - state.housing_units
     labor = _labor_market(
@@ -501,16 +502,18 @@ def _step_infrastructure_environment(context: AnnualTurnContext) -> None:
     )
 
 
-def _step_seasonal_pressures(context: AnnualTurnContext) -> None:
+def _step_seasonal_signals(context: AnnualTurnContext) -> None:
     context.housing_gap = context.state.population / 2.35 - _required(
         context.housing_units,
         "housing_units",
     )
-    context.pressure_ledger = _seasonal_pressure_ledger(
-        state=context.state,
-        policy=context.policy,
-        infrastructure=_required(context.infrastructure, "infrastructure"),
-        pollution=_required(context.pollution, "pollution"),
+    context.signal_ledger = signal_ledger_for_turn(
+        SignalContext(
+            state=context.state,
+            policy=context.policy,
+            infrastructure=_required(context.infrastructure, "infrastructure"),
+            pollution=_required(context.pollution, "pollution"),
+        )
     )
 
 
@@ -586,13 +589,13 @@ def _step_sentiment(context: AnnualTurnContext) -> None:
         service_coverage=service_coverage,
         parameters=context.parameters,
         sensitivity=context.state.sensitivity,
-        pressure_ledger=_required(context.pressure_ledger, "pressure_ledger"),
+        signal_ledger=_required(context.signal_ledger, "signal_ledger"),
     )
     context.public_sentiment = _public_sentiment(context.sentiment_signals, context.parameters)
 
 
 def _step_commit_state(context: AnnualTurnContext) -> None:
-    pressure_ledger = _required(context.pressure_ledger, "pressure_ledger")
+    signal_ledger = _required(context.signal_ledger, "signal_ledger")
     context.next_state = CityState(
         year=context.state.year + 1,
         population=_required(context.population, "population"),
@@ -631,7 +634,7 @@ def _step_commit_state(context: AnnualTurnContext) -> None:
             growth_rate=_required(context.growth_rate, "growth_rate"),
             parameters=context.parameters,
             sensitivity=context.state.sensitivity,
-            pressure_ledger=pressure_ledger,
+            signal_ledger=signal_ledger,
             labor_market=_required(context.labor_market, "labor_market"),
             crime=_required(context.crime, "crime"),
             sentiment_signals=_required(context.sentiment_signals, "sentiment_signals"),
@@ -639,7 +642,7 @@ def _step_commit_state(context: AnnualTurnContext) -> None:
         ),
         sensitivity=context.state.sensitivity,
         pending_effects=_advance_delayed_effects(context.state.pending_effects)
-        + _delayed_effects_from_pressures(pressure_ledger),
+        + _delayed_effects_from_signals(signal_ledger),
     )
 
 
@@ -647,7 +650,7 @@ def _step_detect_issues(context: AnnualTurnContext) -> None:
     context.active_issues = detect_issues(
         _required(context.next_state, "next_state"),
         context.parameters,
-        context.pressure_ledger,
+        context.signal_ledger,
     )
 
 
@@ -674,10 +677,10 @@ ANNUAL_TURN_STEPS = (
         produces=("infrastructure", "pollution"),
     ),
     TurnStep(
-        "seasonal_pressures",
-        _step_seasonal_pressures,
+        "seasonal_signals",
+        _step_seasonal_signals,
         requires=("housing_units", "infrastructure", "pollution"),
-        produces=("housing_gap", "pressure_ledger"),
+        produces=("housing_gap", "signal_ledger"),
     ),
     TurnStep(
         "satisfaction_migration_demographics",
@@ -698,7 +701,7 @@ ANNUAL_TURN_STEPS = (
             "jobs_delta",
             "pollution",
             "housing_gap",
-            "pressure_ledger",
+            "signal_ledger",
             "satisfaction",
             "population",
             "demographics",
@@ -718,7 +721,7 @@ ANNUAL_TURN_STEPS = (
             "infrastructure",
             "pollution",
             "housing_gap",
-            "pressure_ledger",
+            "signal_ledger",
             "satisfaction",
             "population_delta",
             "population",
@@ -734,7 +737,7 @@ ANNUAL_TURN_STEPS = (
     TurnStep(
         "detect_issues",
         _step_detect_issues,
-        requires=("next_state", "pressure_ledger"),
+        requires=("next_state", "signal_ledger"),
         produces=("active_issues",),
     ),
 )

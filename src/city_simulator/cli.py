@@ -403,9 +403,9 @@ def _scenario_briefing_notes(report: SimulationReport) -> list[str]:
     if causes:
         notes.append(f"Main causes: {'; '.join(causes)}.")
 
-    pressure_notes = _pressure_notes(results)
-    if pressure_notes:
-        notes.append(f"Pressure signals: {'; '.join(pressure_notes)}.")
+    signal_notes = _signal_notes(results)
+    if signal_notes:
+        notes.append(f"Turn signals: {'; '.join(signal_notes)}.")
 
     if final.active_issues:
         notes.append(f"Active issues: {_issue_names(final.active_issues)}.")
@@ -452,11 +452,18 @@ def _scenario_cause_notes(
     return causes[:4]
 
 
-def _pressure_notes(results: list[YearResult]) -> list[str]:
+def _signal_notes(results: list[YearResult]) -> list[str]:
     totals: dict[str, float] = {}
+    driver_categories: dict[str, tuple[str, ...]] = {}
     for result in results:
-        for channel, amount in result.pressure_ledger.signals.items():
+        for channel, amount in result.signal_ledger.signals.items():
             totals[channel] = totals.get(channel, 0.0) + amount
+            existing = driver_categories.get(channel, ())
+            driver_categories[channel] = existing + tuple(
+                category
+                for category in result.signal_ledger.drivers_for(channel)
+                if category not in existing
+            )
     labels = {
         "summer_heat_exposure": "summer heat exposure",
         "cooling_demand": "cooling demand",
@@ -465,10 +472,23 @@ def _pressure_notes(results: list[YearResult]) -> list[str]:
         "civic_trust_risk": "civic trust risk",
     }
     return [
-        f"{labels.get(channel, channel.replace('_', ' '))} {amount:.1f}"
+        _signal_note(channel, amount, labels, driver_categories)
         for channel, amount in sorted(totals.items(), key=lambda item: abs(item[1]), reverse=True)
         if abs(amount) >= 1.0
     ][:3]
+
+
+def _signal_note(
+    channel: str,
+    amount: float,
+    labels: dict[str, str],
+    driver_categories: dict[str, tuple[str, ...]],
+) -> str:
+    label = labels.get(channel, channel.replace("_", " "))
+    drivers = driver_categories.get(channel, ())
+    if not drivers:
+        return f"{label} {amount:.1f}"
+    return f"{label} {amount:.1f} ({', '.join(driver.replace('_', ' ') for driver in drivers)})"
 
 
 def _change_word(amount: float) -> str:

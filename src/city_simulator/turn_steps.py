@@ -10,7 +10,7 @@ from city_simulator.state import (
     ExternalControls,
     Issue,
     ModelParameters,
-    PressureLedger,
+    SignalLedger,
 )
 
 
@@ -30,7 +30,7 @@ class AnnualTurnContext:
     infrastructure: float | None = None
     pollution: float | None = None
     housing_gap: float | None = None
-    pressure_ledger: PressureLedger | None = None
+    signal_ledger: SignalLedger | None = None
     satisfaction: float | None = None
     population_delta: float | None = None
     population: float | None = None

@@ -13,7 +13,8 @@ public safety, public sentiment, and city finances.
 See [GOALS.md](GOALS.md) for the project thesis: define a city, throw different
 policy and outside-pressure scenarios at it, and compare what happens.
 See [docs/TURN_MODEL.md](docs/TURN_MODEL.md) for what happens during each
-yearly turn.
+yearly turn and [docs/TURN_PROCESS_MODEL.md](docs/TURN_PROCESS_MODEL.md) for
+how new domains should plug into that turn.
 
 The initial model advances one year at a time. Policy settings influence growth,
 housing pressure, employment, municipal budget, infrastructure condition,
@@ -169,7 +170,7 @@ The table view is a mayor-style annual summary:
 
 When comparing multiple scenarios, the table is followed by a short scenario
 briefing. The briefing summarizes population movement, major causal drivers,
-pressure signals, active issues, and any overcome issues so the comparison
+turn signals, active issues, and any overcome issues so the comparison
 explains why outcomes diverged.
 
 Use JSON output when you want the full state and issue history for a later UI or
@@ -262,10 +263,10 @@ create lagged effects such as civic-trust damage, healthcare surge,
 infrastructure backlog, legal-aid backlog, or business disruption without
 pretending every consequence happens in the same turn.
 
-Annual reports can also include a `pressure_ledger` with named in-turn signals.
-The first implemented pressure slice models severe summer heat as
+Annual reports can also include a `signal_ledger` with named in-turn signals.
+The first implemented signal slice models severe summer heat as
 `summer_heat_exposure`, `cooling_demand`, `grid_shortfall`,
-`healthcare_surge`, and `civic_trust_risk`. Severe pressure can create delayed
+`healthcare_surge`, and `civic_trust_risk`. Severe signals can create delayed
 effects such as repair backlog, lingering healthcare load, and later civic
 trust loss.
 

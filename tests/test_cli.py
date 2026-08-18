@@ -2,7 +2,12 @@ import json
 
 import pytest
 
-from city_simulator.cli import main
+from city_simulator import (
+    CityState,
+    SignalLedger,
+    YearResult,
+)
+from city_simulator.cli import _signal_notes, main
 
 
 @pytest.fixture(autouse=True)
@@ -107,6 +112,31 @@ def test_cli_comparison_includes_causal_briefing(tmp_path, capsys):
     assert "Main causes:" in output
     assert "local zoning and development restrictions deter migration" in output
     assert "business support and infrastructure expanded jobs" in output
+
+
+def test_signal_notes_include_driver_categories():
+    ledger = SignalLedger()
+    ledger.add(
+        "grid_shortfall",
+        6,
+        driver_categories=("environment_seasonality", "institutional_behavior", "policy"),
+    )
+    result = YearResult(
+        year=1,
+        state=CityState(),
+        revenue=0,
+        expenses=0,
+        population_delta=0,
+        jobs_delta=0,
+        housing_gap=0,
+        active_issues=[],
+        overcome_issues=[],
+        signal_ledger=ledger,
+    )
+
+    assert _signal_notes([result]) == [
+        "grid shortfall 6.0 (environment seasonality, institutional behavior, policy)"
+    ]
 
 
 def test_cli_accepts_migration_and_restriction_flags(capsys):

@@ -8,7 +8,13 @@ from city_simulator import (
     DelayedEffect,
     Demographics,
     EmbeddedService,
+    LanguageProfile,
+    LanguageSkill,
+    OrganizationAgent,
+    PersonAgent,
     PlaceAsset,
+    ServiceLanguage,
+    SignalLedger,
     active_delayed_effects,
     simulate,
 )
@@ -20,6 +26,7 @@ from city_simulator.model import (
     advance_year,
     detect_issues,
 )
+from city_simulator.signals import SIGNAL_CONCEPTS
 
 
 def test_simulation_advances_requested_years():
@@ -35,7 +42,7 @@ def test_annual_turn_steps_are_named_in_dependency_order():
         "local_fiscal_policy",
         "development_and_jobs",
         "infrastructure_environment",
-        "seasonal_pressures",
+        "seasonal_signals",
         "satisfaction_migration_demographics",
         "labor_market",
         "sentiment",
@@ -298,12 +305,140 @@ def test_delayed_effects_advance_across_turns():
 def test_default_city_does_not_create_seasonal_heat_cascade():
     result = advance_year(CityState(), CityPolicy())
 
-    assert result.pressure_ledger.signals == {}
+    assert result.signal_ledger.signals == {}
     assert "seasonal_heat_cascade" not in {issue.code for issue in result.active_issues}
     assert not result.state.pending_effects
 
 
-def test_heat_grid_health_cascade_records_pressures_and_delayed_effects():
+def test_signal_ledger_preserves_numeric_signals_and_records_driver_categories():
+    ledger = SignalLedger()
+
+    ledger.add(
+        "service_gap",
+        2.5,
+        "First explanation.",
+        driver_categories=("institutional_behavior",),
+    )
+    ledger.add(
+        "service_gap",
+        1.5,
+        "Second explanation.",
+        driver_categories=("institutional_behavior", "resident_household_behavior"),
+    )
+
+    assert ledger.get("service_gap") == pytest.approx(4)
+    assert ledger.explanations["service_gap"] == (
+        "First explanation.",
+        "Second explanation.",
+    )
+    assert ledger.drivers_for("service_gap") == (
+        "institutional_behavior",
+        "resident_household_behavior",
+    )
+
+
+def test_signal_ledger_records_broad_signal_channels():
+    ledger = SignalLedger()
+
+    ledger.add(
+        "fresh_food_import_gap",
+        12.0,
+        "Local fresh-food demand exceeds local supply and committed imports.",
+        driver_categories=("supply_chain", "regional_spillover"),
+    )
+
+    assert ledger.get("fresh_food_import_gap") == pytest.approx(12)
+    assert ledger.drivers_for("fresh_food_import_gap") == (
+        "supply_chain",
+        "regional_spillover",
+    )
+
+
+def test_signal_concepts_declare_need_inputs_outputs_and_channels():
+    concepts = {concept.name: concept for concept in SIGNAL_CONCEPTS}
+
+    language = concepts["language_service_access"]
+
+    assert language.need
+    assert "state.people.language_profile" in language.inputs
+    assert language.outputs == ("SignalLedger",)
+    assert "interpreter_need" in language.channels
+
+
+def test_language_access_records_turn_signals_without_changing_headlines():
+    people = (
+        PersonAgent(
+            "person-1",
+            household_id="household-1",
+            age=34,
+            income_band="middle",
+            weight=10,
+            language_profile=LanguageProfile(
+                skills=(
+                    LanguageSkill("english", spoken_proficiency="professional"),
+                    LanguageSkill("spanish", spoken_proficiency="professional"),
+                )
+            ),
+        ),
+        PersonAgent(
+            "person-2",
+            household_id="household-2",
+            age=42,
+            income_band="low",
+            weight=30,
+            language_profile=LanguageProfile(
+                skills=(LanguageSkill("amharic", spoken_proficiency="native"),),
+                interpreter_needed=True,
+            ),
+        ),
+    )
+    organizations = (
+        OrganizationAgent(
+            "org-1",
+            organization_type="clinic",
+            service_languages=(
+                ServiceLanguage("english", service_proficiency="professional"),
+                ServiceLanguage("spanish", service_proficiency="professional"),
+            ),
+        ),
+    )
+    baseline = advance_year(CityState(people=people), CityPolicy())
+    with_service_languages = advance_year(
+        CityState(people=people, organizations=organizations),
+        CityPolicy(),
+    )
+
+    assert baseline.signal_ledger.signals == {}
+    assert with_service_languages.signal_ledger.get("language_service_access_gap") == (
+        pytest.approx(31.25)
+    )
+    assert with_service_languages.signal_ledger.get("language_limited_access") == (
+        pytest.approx(75)
+    )
+    assert with_service_languages.signal_ledger.get("interpreter_need") == pytest.approx(75)
+    assert with_service_languages.signal_ledger.get("multilingual_bridge_capacity") == (
+        pytest.approx(25)
+    )
+    assert with_service_languages.signal_ledger.drivers_for(
+        "language_service_access_gap"
+    ) == (
+        "resident_household_behavior",
+        "institutional_behavior",
+    )
+    assert with_service_languages.signal_ledger.drivers_for("interpreter_need") == (
+        "resident_household_behavior",
+        "institutional_behavior",
+    )
+    assert with_service_languages.state.satisfaction == pytest.approx(
+        baseline.state.satisfaction
+    )
+    assert with_service_languages.jobs_delta == pytest.approx(baseline.jobs_delta)
+    assert with_service_languages.state.metrics.public_sentiment == pytest.approx(
+        baseline.state.metrics.public_sentiment
+    )
+
+
+def test_heat_grid_health_cascade_records_signals_and_delayed_effects():
     stressed = CityState(
         population=120_000,
         demographics=Demographics(
@@ -353,9 +488,19 @@ def test_heat_grid_health_cascade_records_pressures_and_delayed_effects():
         CityPolicy(environment_investment=0, transit_investment=0, services_investment=0),
     )
 
-    assert result.pressure_ledger.get("summer_heat_exposure") > 10
-    assert result.pressure_ledger.get("grid_shortfall") > 5
-    assert result.pressure_ledger.get("healthcare_surge") > 5
+    assert result.signal_ledger.get("summer_heat_exposure") > 10
+    assert result.signal_ledger.get("grid_shortfall") > 5
+    assert result.signal_ledger.get("healthcare_surge") > 5
+    assert result.signal_ledger.drivers_for("summer_heat_exposure") == (
+        "environment_seasonality",
+        "baseline_dynamics",
+        "delayed_effects",
+    )
+    assert result.signal_ledger.drivers_for("grid_shortfall") == (
+        "environment_seasonality",
+        "institutional_behavior",
+        "policy",
+    )
     assert "seasonal_heat_cascade" in {issue.code for issue in result.active_issues}
     assert {
         effect.target for effect in result.state.pending_effects

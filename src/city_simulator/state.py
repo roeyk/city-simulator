@@ -247,17 +247,32 @@ class DelayedEffect:
 
 
 @dataclass
-class PressureLedger:
+class SignalLedger:
     signals: dict[str, float] = field(default_factory=dict)
     explanations: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    driver_categories: dict[str, tuple[str, ...]] = field(default_factory=dict)
 
-    def add(self, channel: str, amount: float, explanation: str = "") -> None:
+    def add(
+        self,
+        channel: str,
+        amount: float,
+        explanation: str = "",
+        driver_categories: tuple[str, ...] = (),
+    ) -> None:
         self.signals[channel] = self.signals.get(channel, 0.0) + amount
         if explanation:
             self.explanations[channel] = self.explanations.get(channel, ()) + (explanation,)
+        if driver_categories:
+            existing = self.driver_categories.get(channel, ())
+            self.driver_categories[channel] = existing + tuple(
+                category for category in driver_categories if category not in existing
+            )
 
     def get(self, channel: str) -> float:
         return self.signals.get(channel, 0.0)
+
+    def drivers_for(self, channel: str) -> tuple[str, ...]:
+        return self.driver_categories.get(channel, ())
 
 
 @dataclass(frozen=True)
@@ -490,4 +505,4 @@ class YearResult:
     housing_gap: float
     active_issues: list[Issue]
     overcome_issues: list[Issue]
-    pressure_ledger: PressureLedger = field(default_factory=PressureLedger)
+    signal_ledger: SignalLedger = field(default_factory=SignalLedger)

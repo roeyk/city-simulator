@@ -591,6 +591,50 @@ def test_save_city_round_trips_named_city(tmp_path, monkeypatch):
                         "languages": ["english", "spanish"],
                         "religion": "jewish",
                         "religiosity": "medium",
+                        "affiliations": [
+                            {
+                                "culture": "anglo",
+                                "strength": 0.7,
+                                "source": "raised_culture",
+                                "home_use": True,
+                                "community_use": True,
+                                "self_identified": True,
+                                "years_affiliated": 30,
+                                "tags": ["household"],
+                            },
+                            {
+                                "culture": "hispanic",
+                                "strength": 0.45,
+                                "source": "family",
+                                "self_identified": True,
+                            },
+                        ],
+                    },
+                    "language_profile": {
+                        "preferred_language": "spanish",
+                        "household_languages": ["spanish"],
+                        "interpreter_needed": True,
+                        "skills": [
+                            {
+                                "language": "english",
+                                "spoken_proficiency": "basic",
+                                "reading_proficiency": "conversational",
+                                "writing_proficiency": "basic",
+                                "needs_interpreter": True,
+                                "years_learning": 2,
+                                "arrival_proficiency": "none",
+                                "learning_contexts": ["work", "english_class"],
+                                "exposure_score": 34,
+                                "last_year_practice_hours": 180,
+                            },
+                            {
+                                "language": "spanish",
+                                "spoken_proficiency": "native",
+                                "reading_proficiency": "native",
+                                "writing_proficiency": "professional",
+                                "home_use": True,
+                            },
+                        ],
                     },
                     "adoption": {
                         "is_adopted": True,
@@ -669,6 +713,7 @@ def test_save_city_round_trips_named_city(tmp_path, monkeypatch):
                     "income_band": "middle",
                     "tenure": "owner",
                     "weight": 20,
+                    "household_languages": ["spanish"],
                 }
             ],
             "organizations": [
@@ -686,6 +731,20 @@ def test_save_city_round_trips_named_city(tmp_path, monkeypatch):
                     "owner_ids": ["person-1"],
                     "founded_year": 2019,
                     "customer_types": ["residents", "businesses"],
+                    "service_languages": [
+                        {
+                            "language": "english",
+                            "service_proficiency": "professional",
+                            "staff_capacity": 4,
+                        },
+                        {
+                            "language": "spanish",
+                            "service_proficiency": "native",
+                            "staff_capacity": 2,
+                            "interpreter_capacity": 1,
+                            "tags": ["customer_service"],
+                        },
+                    ],
                 }
             ],
             "pending_effects": [
@@ -753,6 +812,29 @@ def test_save_city_round_trips_named_city(tmp_path, monkeypatch):
     )
     assert load_city("roundtrip").people[0].identity.ethnicities == ("hispanic", "jewish")
     assert load_city("roundtrip").people[0].identity.cultures == ("anglo",)
+    assert load_city("roundtrip").people[0].identity.affiliations[0].culture == "anglo"
+    assert load_city("roundtrip").people[0].identity.affiliations[0].strength == (
+        pytest.approx(0.7)
+    )
+    assert load_city("roundtrip").people[0].identity.affiliations[0].tags == ("household",)
+    assert load_city("roundtrip").people[0].identity.strength_for("hispanic") == (
+        pytest.approx(0.45)
+    )
+    assert load_city("roundtrip").people[0].language_profile.preferred_language == "spanish"
+    assert load_city("roundtrip").people[0].language_profile.household_languages == (
+        "spanish",
+    )
+    assert load_city("roundtrip").people[0].language_profile.interpreter_needed
+    assert load_city("roundtrip").people[0].language_profile.skills[0].language == "english"
+    assert (
+        load_city("roundtrip").people[0].language_profile.skills[0].spoken_proficiency
+        == "basic"
+    )
+    assert load_city("roundtrip").people[0].language_profile.skills[0].learning_contexts == (
+        "work",
+        "english_class",
+    )
+    assert load_city("roundtrip").people[0].language_profile.skills[1].home_use
     assert load_city("roundtrip").people[0].adoption.is_adopted
     assert load_city("roundtrip").people[0].adoption.raised_cultures == ("anglo",)
     assert load_city("roundtrip").people[0].workplace_id == "plumbing-business-1"
@@ -785,12 +867,21 @@ def test_save_city_round_trips_named_city(tmp_path, monkeypatch):
         == "business_owner"
     )
     assert load_city("roundtrip").households[0].member_ids == ("person-1",)
+    assert load_city("roundtrip").households[0].household_languages == ("spanish",)
     assert load_city("roundtrip").organizations[0].organization_type == "university"
     assert load_city("roundtrip").organizations[1].owner_ids == ("person-1",)
     assert load_city("roundtrip").organizations[1].founded_year == 2019
     assert load_city("roundtrip").organizations[1].customer_types == (
         "residents",
         "businesses",
+    )
+    assert load_city("roundtrip").organizations[1].service_languages[1].language == "spanish"
+    assert (
+        load_city("roundtrip").organizations[1].service_languages[1].interpreter_capacity
+        == 1
+    )
+    assert load_city("roundtrip").organizations[1].service_languages[1].tags == (
+        "customer_service",
     )
     assert load_city("roundtrip").pending_effects[0].target == "infrastructure_backlog"
     assert load_city("roundtrip").pending_effects[0].tags == ("grid", "capital_repair")

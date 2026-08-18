@@ -12,7 +12,7 @@ from city_simulator.state import (
     CityState,
     Demographics,
     ModelParameters,
-    PressureLedger,
+    SignalLedger,
 )
 
 
@@ -30,13 +30,13 @@ def _city_metrics(
     growth_rate: float,
     parameters: ModelParameters,
     sensitivity: CitySensitivity,
-    pressure_ledger: PressureLedger | None = None,
+    signal_ledger: SignalLedger | None = None,
     labor_market: dict[str, float] | None = None,
     crime: float | None = None,
     sentiment_signals: dict[str, float] | None = None,
     public_sentiment: float | None = None,
 ) -> CityMetrics:
-    ledger = pressure_ledger or PressureLedger()
+    ledger = signal_ledger or SignalLedger()
     service_coverage = _service_coverage(state)
     labor = labor_market or _labor_market(
         population=population,
@@ -80,7 +80,7 @@ def _city_metrics(
             service_coverage=service_coverage,
             parameters=parameters,
             sensitivity=sensitivity,
-            pressure_ledger=ledger,
+            signal_ledger=ledger,
         )
     )
     sentiment = (
@@ -228,9 +228,9 @@ def _sentiment_signals(
     service_coverage: float,
     parameters: ModelParameters,
     sensitivity: CitySensitivity,
-    pressure_ledger: PressureLedger | None = None,
+    signal_ledger: SignalLedger | None = None,
 ) -> dict[str, float]:
-    ledger = pressure_ledger or PressureLedger()
+    ledger = signal_ledger or SignalLedger()
     current_population = max(demographics.total, 1.0)
     low_income_share = demographics.low_income / current_population
     high_income_share = demographics.high_income / current_population
