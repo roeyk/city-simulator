@@ -61,7 +61,12 @@ from city_simulator.person_generator import (
 )
 from city_simulator.scenario import ScenarioError, load_city, load_scenario
 from city_simulator.starter import STARTER_PRESETS, starter_city, write_starter_city
-from city_simulator.synthetic_city import generate_synthetic_city
+from city_simulator.synthetic_city import (
+    SyntheticGroupProfile,
+    generate_grouped_synthetic_population,
+    generate_synthetic_city,
+    synthetic_group_profiles_from_mapping,
+)
 from city_simulator.views import (
     InventoryStatusView,
     LanguageAccessView,
@@ -132,6 +137,7 @@ __all__ = [
     "SectorMarketBalance",
     "ServiceLanguage",
     "SignalLedger",
+    "SyntheticGroupProfile",
     "SyntheticPopulationRecipe",
     "SyntheticPopulationSourceProfile",
     "TradeSchoolProgram",
@@ -147,6 +153,7 @@ __all__ = [
     "eligible_job_template_for",
     "generate_family_agents",
     "generate_family_population",
+    "generate_grouped_synthetic_population",
     "generate_representative_citizens",
     "generate_synthetic_city",
     "generate_synthetic_population",
@@ -157,6 +164,7 @@ __all__ = [
     "load_scenario",
     "simulate",
     "starter_city",
+    "synthetic_group_profiles_from_mapping",
     "trade_school_program_for",
     "weighted_college_program_for",
     "write_starter_city",

@@ -108,6 +108,36 @@ PYTHONPATH=src python3 -m city_simulator init-city synthetic-test \
   --people 30
 ```
 
+Synthetic cities can also use a JSON group profile to set ethnic/heritage
+percentages, group-specific socioeconomic classes, and group-specific vocation
+weights:
+
+```json
+{
+  "groups": [
+    {
+      "heritage": "anglo",
+      "population_share": 50,
+      "income_bands": {"middle": 70, "high": 30},
+      "job_pools": {"private_service": 60, "business_owner": 40}
+    },
+    {
+      "heritage": "hispanic",
+      "population_share": 50,
+      "income_bands": {"low": 45, "middle": 55},
+      "vocations": {"city_service": 50, "private_service": 50}
+    }
+  ]
+}
+```
+
+```bash
+PYTHONPATH=src python3 -m city_simulator init-city profiled-test \
+  --synthetic \
+  --people 100 \
+  --synthetic-profile profile.json
+```
+
 Run one scenario against a city:
 
 ```bash

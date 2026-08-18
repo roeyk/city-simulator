@@ -26,7 +26,11 @@ from city_simulator.starter import (
     write_starter_city,
 )
 from city_simulator.storage import city_path, ensure_data_dirs, saved_cities
-from city_simulator.synthetic_city import generate_synthetic_city
+from city_simulator.synthetic_city import (
+    SyntheticGroupProfile,
+    generate_synthetic_city,
+    synthetic_group_profiles_from_mapping,
+)
 
 
 class SimulationReport(TypedDict):
@@ -62,6 +66,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="write a deterministic synthetic test city with people, households, organizations, and supply data",
     )
     init_parser.add_argument("--people", type=int, default=30, help="synthetic people to generate")
+    init_parser.add_argument(
+        "--synthetic-profile",
+        help="JSON file with synthetic ethnic group percentages, income bands, and vocations",
+    )
     init_mode.add_argument("--wizard", action="store_true", help="ask demographic questions")
 
     _add_run_arguments(parser)
@@ -96,6 +104,8 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "init-city":
         try:
+            if args.synthetic_profile and not args.synthetic:
+                raise ValueError("--synthetic-profile requires --synthetic")
             if args.wizard:
                 city = prompt_for_starter_city()
                 ensure_data_dirs()
@@ -105,11 +115,14 @@ def main(argv: list[str] | None = None) -> int:
                     json.dump(asdict(city), handle, indent=2)
                     handle.write("\n")
             elif args.synthetic:
-                city = generate_synthetic_city(args.people)
+                city = generate_synthetic_city(
+                    args.people,
+                    group_profiles=_synthetic_group_profiles(args.synthetic_profile),
+                )
                 save_city(args.path, city)
             else:
                 city = write_starter_city(args.path, args.preset, args.population)
-        except ValueError as exc:
+        except (TypeError, ValueError) as exc:
             print(f"city-simulator: {exc}")
             return 2
         city_kind = "synthetic" if args.synthetic else args.preset
@@ -162,6 +175,19 @@ def main(argv: list[str] | None = None) -> int:
             print()
             print(_format_comparison_citizens(reports))
     return 0
+
+
+def _synthetic_group_profiles(path: str | None) -> tuple[SyntheticGroupProfile, ...]:
+    if path is None:
+        return ()
+    try:
+        with open(path, encoding="utf-8") as handle:
+            data = json.load(handle)
+    except OSError as exc:
+        raise ValueError(f"could not read synthetic profile {path}: {exc}") from exc
+    if not isinstance(data, dict):
+        raise TypeError("synthetic profile must contain a JSON object")
+    return synthetic_group_profiles_from_mapping(data)
 
 
 def _play(args: argparse.Namespace, input_func=None, output_func=print) -> int:
