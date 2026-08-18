@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from city_simulator.derived import _active_effect_amount, _density, _service_coverage
 from city_simulator.state import CityPolicy, CityState, DelayedEffect, SignalLedger
-from city_simulator.views import LanguageAccessView
+from city_simulator.views import InventoryStatusView, LanguageAccessView
 
 DRIVER_BASELINE = "baseline_dynamics"
 DRIVER_DELAYED_EFFECTS = "delayed_effects"
@@ -141,6 +141,47 @@ def add_sector_market_signals(context: SignalContext, ledger: SignalLedger) -> N
             )
 
 
+def add_inventory_signals(context: SignalContext, ledger: SignalLedger) -> None:
+    if not context.state.inventories:
+        return
+    view = InventoryStatusView.derive(context.state)
+    if view.low_inventory_records > 0:
+        ledger.add(
+            "inventory_reorder_gap",
+            view.low_inventory_records,
+            "Inventory holders have fewer days on hand than their reorder thresholds.",
+            driver_categories=(DRIVER_SUPPLY_CHAIN, DRIVER_RESIDENT, DRIVER_MARKET),
+        )
+    if view.reserve_gap_days > 0:
+        ledger.add(
+            "inventory_reserve_gap",
+            view.reserve_gap_days,
+            "Inventory reserves are below target days on hand for households or organizations.",
+            driver_categories=(DRIVER_SUPPLY_CHAIN, DRIVER_RESIDENT, DRIVER_INSTITUTIONAL),
+        )
+    if view.stockout_risk > 0:
+        ledger.add(
+            "inventory_stockout_risk",
+            view.stockout_risk,
+            "Low inventory levels create stockout risk for attached holders.",
+            driver_categories=(DRIVER_SUPPLY_CHAIN, DRIVER_MARKET),
+        )
+    if view.cold_chain_exposure_records > 0:
+        ledger.add(
+            "cold_chain_failure_risk",
+            view.cold_chain_exposure_records,
+            "Cold-chain-dependent inventories have spoilage exposure.",
+            driver_categories=(DRIVER_SUPPLY_CHAIN, DRIVER_INSTITUTIONAL),
+        )
+    if view.spoilage_risk > 0:
+        ledger.add(
+            "inventory_spoilage_risk",
+            view.spoilage_risk,
+            "Perishable inventories have spoilage or expiration exposure.",
+            driver_categories=(DRIVER_SUPPLY_CHAIN, DRIVER_MARKET),
+        )
+
+
 SIGNAL_CONCEPTS: tuple[SignalConcept, ...] = (
     SignalConcept(
         name="seasonal_heat_cascade",
@@ -203,6 +244,24 @@ SIGNAL_CONCEPTS: tuple[SignalConcept, ...] = (
             "sector_capacity_strain",
         ),
         collect=add_sector_market_signals,
+    ),
+    SignalConcept(
+        name="inventory_status",
+        need=(
+            "Expose lower-level household, organization, supply-node, or aggregate "
+            "inventories before shortages become service failures, price shocks, or "
+            "emergency reserve gaps."
+        ),
+        inputs=("state.inventories",),
+        outputs=("SignalLedger", "InventoryStatusView"),
+        channels=(
+            "inventory_reorder_gap",
+            "inventory_reserve_gap",
+            "inventory_stockout_risk",
+            "cold_chain_failure_risk",
+            "inventory_spoilage_risk",
+        ),
+        collect=add_inventory_signals,
     ),
 )
 

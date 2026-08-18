@@ -321,6 +321,63 @@ class SectorMarketBalance:
 
 
 @dataclass(frozen=True)
+class InventoryState:
+    holder_type: str
+    holder_id: str
+    sector: str
+    good: str
+    quantity: float = 0.0
+    daily_use: float = 0.0
+    days_on_hand: float = 0.0
+    reorder_threshold_days: float = 0.0
+    reserve_target_days: float = 0.0
+    storage_type: str = "standard"
+    spoilage_risk: float = 0.0
+    stockout_risk: float = 0.0
+    notes: tuple[str, ...] = ()
+
+    @property
+    def computed_days_on_hand(self) -> float:
+        if self.daily_use <= 0:
+            return self.days_on_hand
+        return self.quantity / self.daily_use
+
+    @property
+    def raw_days_on_hand(self) -> float:
+        if self.days_on_hand > 0:
+            return self.days_on_hand
+        return self.computed_days_on_hand
+
+    @property
+    def spoilage_adjustment(self) -> float:
+        return max(0.0, min(self.spoilage_risk, 1.0))
+
+    @property
+    def effective_days_on_hand(self) -> float:
+        return self.raw_days_on_hand * (1.0 - self.spoilage_adjustment)
+
+    @property
+    def reorder_gap_days(self) -> float:
+        return max(self.reorder_threshold_days - self.effective_days_on_hand, 0.0)
+
+    @property
+    def reserve_gap_days(self) -> float:
+        return max(self.reserve_target_days - self.effective_days_on_hand, 0.0)
+
+    @property
+    def effective_stockout_risk(self) -> float:
+        if self.stockout_risk > 0:
+            return self.stockout_risk
+        if self.reorder_threshold_days <= 0:
+            return 0.0
+        return min(self.reorder_gap_days / self.reorder_threshold_days, 1.0)
+
+    @property
+    def cold_chain_dependent(self) -> bool:
+        return self.storage_type in {"cold_chain", "refrigerated", "frozen"}
+
+
+@dataclass(frozen=True)
 class FinancialInstitutionProfile:
     institution_type: str = "unspecified"
     charter: str = "unspecified"
@@ -413,6 +470,7 @@ class CityState:
     households: tuple[HouseholdAgent, ...] = ()
     organizations: tuple[OrganizationAgent, ...] = ()
     sector_market_balances: tuple[SectorMarketBalance, ...] = ()
+    inventories: tuple[InventoryState, ...] = ()
     housing_stock: HousingStock = HousingStock()
     housing_assistance: HousingAssistance = HousingAssistance()
     housing_units: float = 43_000

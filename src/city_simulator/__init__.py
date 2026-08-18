@@ -35,6 +35,7 @@ from city_simulator.model import (
     FinancialInstitutionProfile,
     HousingAssistance,
     HousingStock,
+    InventoryState,
     Issue,
     ModelParameters,
     Neighborhood,
@@ -61,6 +62,7 @@ from city_simulator.person_generator import (
 from city_simulator.scenario import ScenarioError, load_city, load_scenario
 from city_simulator.starter import STARTER_PRESETS, starter_city, write_starter_city
 from city_simulator.views import (
+    InventoryStatusView,
     LanguageAccessView,
     PopulationStructureView,
     View,
@@ -110,6 +112,8 @@ __all__ = [
     "HouseholdAgent",
     "HousingAssistance",
     "HousingStock",
+    "InventoryState",
+    "InventoryStatusView",
     "Issue",
     "JobTemplate",
     "LanguageAccessView",

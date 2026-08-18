@@ -48,6 +48,7 @@ from city_simulator.state import (
     FinancialInstitutionProfile,
     HousingAssistance,
     HousingStock,
+    InventoryState,
     Issue,
     ModelParameters,
     Neighborhood,
@@ -59,6 +60,7 @@ from city_simulator.state import (
     ZoningEnvelope,
 )
 from city_simulator.views import (
+    InventoryStatusView,
     LanguageAccessView,
     PopulationStructureView,
     View,
@@ -107,6 +109,8 @@ __all__ = [
     "HouseholdAgent",
     "HousingAssistance",
     "HousingStock",
+    "InventoryState",
+    "InventoryStatusView",
     "Issue",
     "JobTemplate",
     "LanguageAccessView",

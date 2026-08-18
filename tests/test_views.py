@@ -5,6 +5,8 @@ from city_simulator import (
     CityState,
     Demographics,
     HouseholdAgent,
+    InventoryState,
+    InventoryStatusView,
     LanguageAccessView,
     LanguageProfile,
     LanguageSkill,
@@ -41,6 +43,43 @@ def test_population_structure_view_derives_from_city_state():
     assert isclose(view.middle_income_share, 0.5)
     assert isclose(view.high_income_share, 0.25)
     assert isclose(view.dependency_ratio, 80 / 120)
+
+
+def test_inventory_status_view_derives_from_inventory_records():
+    state = CityState(
+        inventories=(
+            InventoryState(
+                holder_type="household",
+                holder_id="household-1",
+                sector="household",
+                good="food",
+                quantity=4,
+                daily_use=2,
+                reorder_threshold_days=3,
+                reserve_target_days=5,
+            ),
+            InventoryState(
+                holder_type="organization",
+                holder_id="restaurant-1",
+                sector="restaurant",
+                good="fresh_food",
+                days_on_hand=3,
+                reorder_threshold_days=4,
+                reserve_target_days=6,
+                storage_type="refrigerated",
+                spoilage_risk=0.5,
+            ),
+        )
+    )
+
+    view = InventoryStatusView.derive(state)
+
+    assert view.name == "inventory_status"
+    assert view.source_dependencies == ("inventories",)
+    assert view.inventory_records == 2
+    assert view.low_inventory_records == 2
+    assert isclose(view.reserve_gap_days, 7.5)
+    assert isclose(view.cold_chain_exposure_records, 1)
 
 
 def test_population_structure_view_exports_plain_values():

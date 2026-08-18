@@ -25,6 +25,7 @@ from city_simulator.model import (
     HouseholdAgent,
     HousingAssistance,
     HousingStock,
+    InventoryState,
     LanguageProfile,
     LanguageSkill,
     Neighborhood,
@@ -106,6 +107,9 @@ def city_from_mapping(data: dict[str, Any]) -> CityState:
     sector_market_balances_data = data.get("sector_market_balances", ())
     if not isinstance(sector_market_balances_data, list | tuple):
         raise ScenarioError("city sector_market_balances must be an array")
+    inventories_data = data.get("inventories", ())
+    if not isinstance(inventories_data, list | tuple):
+        raise ScenarioError("city inventories must be an array")
     pending_effects_data = data.get("pending_effects", ())
     if not isinstance(pending_effects_data, list | tuple):
         raise ScenarioError("city pending_effects must be an array")
@@ -154,6 +158,7 @@ def city_from_mapping(data: dict[str, Any]) -> CityState:
             "households",
             "organizations",
             "sector_market_balances",
+            "inventories",
             "pending_effects",
         }
     }
@@ -182,6 +187,10 @@ def city_from_mapping(data: dict[str, Any]) -> CityState:
             "sector_market_balances": _sector_market_balances_from_sequence(
                 sector_market_balances_data,
                 "city sector_market_balances",
+            ),
+            "inventories": _inventories_from_sequence(
+                inventories_data,
+                "city inventories",
             ),
             "pending_effects": _delayed_effects_from_sequence(
                 pending_effects_data,
@@ -603,6 +612,21 @@ def _sector_market_balances_from_sequence(
         _tupleize(balance_data, ("notes",))
         balances.append(_dataclass_from_mapping(SectorMarketBalance, balance_data, item_label))
     return tuple(balances)
+
+
+def _inventories_from_sequence(
+    data: list[Any] | tuple[Any, ...],
+    label: str,
+) -> tuple[InventoryState, ...]:
+    inventories: list[InventoryState] = []
+    for index, value in enumerate(data):
+        item_label = f"{label}[{index}]"
+        if not isinstance(value, dict):
+            raise ScenarioError(f"{item_label} must be an object")
+        inventory_data = dict(value)
+        _tupleize(inventory_data, ("notes",))
+        inventories.append(_dataclass_from_mapping(InventoryState, inventory_data, item_label))
+    return tuple(inventories)
 
 
 def _delayed_effects_from_sequence(

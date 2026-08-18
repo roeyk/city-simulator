@@ -8,6 +8,8 @@ from city_simulator import (
     DelayedEffect,
     Demographics,
     EmbeddedService,
+    InventoryState,
+    InventoryStatusView,
     LanguageProfile,
     LanguageSkill,
     OrganizationAgent,
@@ -360,6 +362,7 @@ def test_signal_concepts_declare_need_inputs_outputs_and_channels():
 
     language = concepts["language_service_access"]
     sector_market = concepts["sector_market_balance"]
+    inventory = concepts["inventory_status"]
 
     assert language.need
     assert "state.people.language_profile" in language.inputs
@@ -367,6 +370,82 @@ def test_signal_concepts_declare_need_inputs_outputs_and_channels():
     assert "interpreter_need" in language.channels
     assert "state.sector_market_balances" in sector_market.inputs
     assert "sector_unmet_demand" in sector_market.channels
+    assert "state.inventories" in inventory.inputs
+    assert "inventory_stockout_risk" in inventory.channels
+
+
+def test_inventory_status_view_accounts_for_spoilage_adjusted_days_on_hand():
+    view = InventoryStatusView.derive_from_inventories(
+        (
+            InventoryState(
+                holder_type="household",
+                holder_id="household-1",
+                sector="household",
+                good="shelf_stable_food",
+                quantity=6,
+                daily_use=2,
+                reorder_threshold_days=5,
+                reserve_target_days=7,
+            ),
+            InventoryState(
+                holder_type="organization",
+                holder_id="grocery-1",
+                sector="grocery",
+                good="fresh_food",
+                days_on_hand=2,
+                reorder_threshold_days=3,
+                reserve_target_days=5,
+                storage_type="cold_chain",
+                spoilage_risk=0.25,
+                stockout_risk=0.7,
+            ),
+        )
+    )
+
+    assert view.inventory_records == pytest.approx(2)
+    assert view.low_inventory_records == pytest.approx(2)
+    assert view.reserve_gap_days == pytest.approx(7.5)
+    assert view.stockout_risk == pytest.approx(1.1)
+    assert view.cold_chain_exposure_records == pytest.approx(1)
+    assert view.spoilage_risk == pytest.approx(0.25)
+
+
+def test_inventory_records_emit_turn_signals_without_agent_inventory_fields():
+    state = CityState(
+        inventories=(
+            InventoryState(
+                holder_type="household",
+                holder_id="household-1",
+                sector="household",
+                good="shelf_stable_food",
+                quantity=6,
+                daily_use=2,
+                reorder_threshold_days=5,
+                reserve_target_days=7,
+            ),
+            InventoryState(
+                holder_type="organization",
+                holder_id="grocery-1",
+                sector="grocery",
+                good="fresh_food",
+                days_on_hand=2,
+                reorder_threshold_days=3,
+                reserve_target_days=5,
+                storage_type="cold_chain",
+                spoilage_risk=0.25,
+                stockout_risk=0.7,
+            ),
+        )
+    )
+
+    result = advance_year(state, CityPolicy())
+
+    assert result.state.inventories == state.inventories
+    assert result.signal_ledger.get("inventory_reorder_gap") == pytest.approx(2)
+    assert result.signal_ledger.get("inventory_reserve_gap") == pytest.approx(7.5)
+    assert result.signal_ledger.get("inventory_stockout_risk") == pytest.approx(1.1)
+    assert result.signal_ledger.get("cold_chain_failure_risk") == pytest.approx(1)
+    assert result.signal_ledger.get("inventory_spoilage_risk") == pytest.approx(0.25)
 
 
 def test_sector_market_balance_records_accounting_gaps_as_turn_signals():

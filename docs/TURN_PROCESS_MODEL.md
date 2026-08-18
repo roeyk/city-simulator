@@ -87,6 +87,7 @@ and testable outside the annual turn.
 Examples:
 
 - `SupplyChainBalanceView`
+- `InventoryStatusView`
 - `SectorMarketBalanceView`
 - `CommuteFlowView`
 - `RegionalFlowView`
@@ -267,6 +268,7 @@ Current active signal concepts:
 - `seasonal_heat_cascade`
 - `language_service_access`
 - `sector_market_balance`
+- `inventory_status`
 
 Current annual turn steps:
 

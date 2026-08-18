@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import ClassVar, TypeVar
 
 from city_simulator.agents import OrganizationAgent, PersonAgent, ServiceLanguage
-from city_simulator.state import CityState
+from city_simulator.state import CityState, InventoryState
 
 ViewT = TypeVar("ViewT", bound="View")
 
@@ -187,3 +187,52 @@ def _best_service_access_score(
         (language_service_access_score(person, organization) for organization in organizations),
         default=50.0,
     )
+
+
+@dataclass(frozen=True)
+class InventoryStatusView(View):
+    name: ClassVar[str] = "inventory_status"
+    source_dependencies: ClassVar[tuple[str, ...]] = ("inventories",)
+
+    inventory_records: float
+    low_inventory_records: float
+    stockout_risk: float
+    reserve_gap_days: float
+    cold_chain_exposure_records: float
+    spoilage_risk: float
+
+    @classmethod
+    def derive(cls, state: CityState) -> InventoryStatusView:
+        return cls.derive_from_inventories(state.inventories)
+
+    @classmethod
+    def derive_from_inventories(
+        cls,
+        inventories: tuple[InventoryState, ...],
+    ) -> InventoryStatusView:
+        low_inventory_records = sum(
+            1.0 for inventory in inventories if inventory.reorder_gap_days > 0
+        )
+        cold_chain_exposure_records = sum(
+            1.0
+            for inventory in inventories
+            if inventory.cold_chain_dependent and inventory.spoilage_risk > 0
+        )
+        return cls(
+            inventory_records=float(len(inventories)),
+            low_inventory_records=low_inventory_records,
+            stockout_risk=sum(inventory.effective_stockout_risk for inventory in inventories),
+            reserve_gap_days=sum(inventory.reserve_gap_days for inventory in inventories),
+            cold_chain_exposure_records=cold_chain_exposure_records,
+            spoilage_risk=sum(inventory.spoilage_risk for inventory in inventories),
+        )
+
+    def as_dict(self) -> dict[str, float]:
+        return {
+            "inventory_records": self.inventory_records,
+            "low_inventory_records": self.low_inventory_records,
+            "stockout_risk": self.stockout_risk,
+            "reserve_gap_days": self.reserve_gap_days,
+            "cold_chain_exposure_records": self.cold_chain_exposure_records,
+            "spoilage_risk": self.spoilage_risk,
+        }

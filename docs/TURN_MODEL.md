@@ -100,6 +100,7 @@ Current signal concepts:
 - `seasonal_heat_cascade`
 - `language_service_access`
 - `sector_market_balance`
+- `inventory_status`
 
 The signal system is intentionally broader than pressure. A signal can be a
 need, flow, capacity, balance, risk, buffer, service gap, import dependency, or
@@ -264,6 +265,10 @@ Current examples:
 - `sector_market_balance` consumes `CityState.sector_market_balances`. It
   emits local supply gaps, regional import dependency, unmet demand, price
   pressure, wait pressure, and capacity strain channels.
+- `inventory_status` consumes lower-level `CityState.inventories` records for
+  households, organizations, supply nodes, or aggregate holders. It emits
+  reorder gaps, reserve gaps, stockout risk, cold-chain failure risk, and
+  spoilage risk channels.
 
 ## Delayed Effects
 

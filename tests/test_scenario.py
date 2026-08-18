@@ -764,6 +764,31 @@ def test_save_city_round_trips_named_city(tmp_path, monkeypatch):
                     "notes": ["regional produce distributor"],
                 }
             ],
+            "inventories": [
+                {
+                    "holder_type": "household",
+                    "holder_id": "household-1",
+                    "sector": "household",
+                    "good": "shelf_stable_food",
+                    "quantity": 6,
+                    "daily_use": 2,
+                    "reorder_threshold_days": 5,
+                    "reserve_target_days": 7,
+                    "notes": ["pantry shelf"],
+                },
+                {
+                    "holder_type": "organization",
+                    "holder_id": "plumbing-business-1",
+                    "sector": "grocery",
+                    "good": "fresh_food",
+                    "days_on_hand": 2,
+                    "reorder_threshold_days": 3,
+                    "reserve_target_days": 5,
+                    "storage_type": "cold_chain",
+                    "spoilage_risk": 0.25,
+                    "stockout_risk": 0.7,
+                },
+            ],
             "pending_effects": [
                 {
                     "source": "summer_blackout",
@@ -911,6 +936,16 @@ def test_save_city_round_trips_named_city(tmp_path, monkeypatch):
     assert load_city("roundtrip").sector_market_balances[0].notes == (
         "regional produce distributor",
     )
+    assert load_city("roundtrip").inventories[0].holder_type == "household"
+    assert load_city("roundtrip").inventories[0].holder_id == "household-1"
+    assert load_city("roundtrip").inventories[0].effective_days_on_hand == (
+        pytest.approx(3)
+    )
+    assert load_city("roundtrip").inventories[1].raw_days_on_hand == pytest.approx(2)
+    assert load_city("roundtrip").inventories[1].effective_days_on_hand == (
+        pytest.approx(1.5)
+    )
+    assert load_city("roundtrip").inventories[1].cold_chain_dependent
     assert load_city("roundtrip").pending_effects[0].target == "infrastructure_backlog"
     assert load_city("roundtrip").pending_effects[0].tags == ("grid", "capital_repair")
     assert load_city("roundtrip").neighborhoods["central"].housing_stock.rowhouse_units == 22
