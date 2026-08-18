@@ -13,6 +13,7 @@ from city_simulator import (
     OrganizationAgent,
     PersonAgent,
     PlaceAsset,
+    SectorMarketBalance,
     ServiceLanguage,
     SignalLedger,
     active_delayed_effects,
@@ -358,11 +359,57 @@ def test_signal_concepts_declare_need_inputs_outputs_and_channels():
     concepts = {concept.name: concept for concept in SIGNAL_CONCEPTS}
 
     language = concepts["language_service_access"]
+    sector_market = concepts["sector_market_balance"]
 
     assert language.need
     assert "state.people.language_profile" in language.inputs
     assert language.outputs == ("SignalLedger",)
     assert "interpreter_need" in language.channels
+    assert "state.sector_market_balances" in sector_market.inputs
+    assert "sector_unmet_demand" in sector_market.channels
+
+
+def test_sector_market_balance_records_accounting_gaps_as_turn_signals():
+    state = CityState(
+        sector_market_balances=(
+            SectorMarketBalance(
+                sector="grocery",
+                good_or_service="fresh_food",
+                local_demand=1_000,
+                local_supply=350,
+                imports=400,
+                inventory_or_capacity_drawdown=50,
+                substitution=100,
+                price_pressure=0.12,
+                utilization=0.97,
+                notes=("regional produce distributor",),
+            ),
+            SectorMarketBalance(
+                sector="medical",
+                good_or_service="primary_care_visits",
+                local_demand=500,
+                local_supply=460,
+                imports=20,
+                wait_pressure=0.2,
+            ),
+        )
+    )
+
+    result = advance_year(state, CityPolicy())
+
+    assert state.sector_market_balances[0].accounted_supply == pytest.approx(900)
+    assert state.sector_market_balances[0].effective_unmet_demand == pytest.approx(100)
+    assert result.signal_ledger.get("sector_local_supply_gap") == pytest.approx(690)
+    assert result.signal_ledger.get("regional_import_dependency") == pytest.approx(420)
+    assert result.signal_ledger.get("sector_unmet_demand") == pytest.approx(120)
+    assert result.signal_ledger.get("sector_price_pressure") == pytest.approx(0.12)
+    assert result.signal_ledger.get("sector_wait_pressure") == pytest.approx(0.2)
+    assert result.signal_ledger.get("sector_capacity_strain") == pytest.approx(97)
+    assert result.signal_ledger.drivers_for("regional_import_dependency") == (
+        "regional_spillover",
+        "supply_chain",
+        "market_forces",
+    )
 
 
 def test_language_access_records_turn_signals_without_changing_headlines():

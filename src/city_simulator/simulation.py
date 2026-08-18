@@ -609,6 +609,7 @@ def _step_commit_state(context: AnnualTurnContext) -> None:
         people=context.state.people,
         households=context.state.households,
         organizations=context.state.organizations,
+        sector_market_balances=context.state.sector_market_balances,
         housing_stock=context.state.housing_stock,
         housing_assistance=context.state.housing_assistance,
         housing_units=_required(context.housing_units, "housing_units"),

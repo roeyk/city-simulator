@@ -747,6 +747,23 @@ def test_save_city_round_trips_named_city(tmp_path, monkeypatch):
                     ],
                 }
             ],
+            "sector_market_balances": [
+                {
+                    "sector": "grocery",
+                    "good_or_service": "fresh_food",
+                    "local_demand": 1000,
+                    "local_supply": 350,
+                    "imports": 400,
+                    "exports": 20,
+                    "inventory_or_capacity_drawdown": 50,
+                    "substitution": 100,
+                    "unmet_demand": 120,
+                    "price_pressure": 0.12,
+                    "wait_pressure": 0.03,
+                    "utilization": 0.97,
+                    "notes": ["regional produce distributor"],
+                }
+            ],
             "pending_effects": [
                 {
                     "source": "summer_blackout",
@@ -882,6 +899,17 @@ def test_save_city_round_trips_named_city(tmp_path, monkeypatch):
     )
     assert load_city("roundtrip").organizations[1].service_languages[1].tags == (
         "customer_service",
+    )
+    assert load_city("roundtrip").sector_market_balances[0].sector == "grocery"
+    assert load_city("roundtrip").sector_market_balances[0].good_or_service == "fresh_food"
+    assert load_city("roundtrip").sector_market_balances[0].accounted_supply == (
+        pytest.approx(880)
+    )
+    assert load_city("roundtrip").sector_market_balances[0].effective_unmet_demand == (
+        pytest.approx(120)
+    )
+    assert load_city("roundtrip").sector_market_balances[0].notes == (
+        "regional produce distributor",
     )
     assert load_city("roundtrip").pending_effects[0].target == "infrastructure_backlog"
     assert load_city("roundtrip").pending_effects[0].tags == ("grid", "capital_repair")

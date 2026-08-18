@@ -266,6 +266,7 @@ Current active signal concepts:
 
 - `seasonal_heat_cascade`
 - `language_service_access`
+- `sector_market_balance`
 
 Current annual turn steps:
 

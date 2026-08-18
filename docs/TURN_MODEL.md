@@ -99,6 +99,7 @@ Current signal concepts:
 
 - `seasonal_heat_cascade`
 - `language_service_access`
+- `sector_market_balance`
 
 The signal system is intentionally broader than pressure. A signal can be a
 need, flow, capacity, balance, risk, buffer, service gap, import dependency, or
@@ -260,6 +261,9 @@ Current examples:
 - `language_service_access` consumes people language profiles and organization
   service languages. It emits service-access gap, limited-access share,
   interpreter need, and multilingual bridge capacity channels.
+- `sector_market_balance` consumes `CityState.sector_market_balances`. It
+  emits local supply gaps, regional import dependency, unmet demand, price
+  pressure, wait pressure, and capacity strain channels.
 
 ## Delayed Effects
 

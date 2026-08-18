@@ -32,6 +32,7 @@ from city_simulator.model import (
     OrganizationAgent,
     PersonAgent,
     PlaceAsset,
+    SectorMarketBalance,
     ServiceLanguage,
     ZoningEnvelope,
 )
@@ -102,6 +103,9 @@ def city_from_mapping(data: dict[str, Any]) -> CityState:
     organizations_data = data.get("organizations", ())
     if not isinstance(organizations_data, list | tuple):
         raise ScenarioError("city organizations must be an array")
+    sector_market_balances_data = data.get("sector_market_balances", ())
+    if not isinstance(sector_market_balances_data, list | tuple):
+        raise ScenarioError("city sector_market_balances must be an array")
     pending_effects_data = data.get("pending_effects", ())
     if not isinstance(pending_effects_data, list | tuple):
         raise ScenarioError("city pending_effects must be an array")
@@ -149,6 +153,7 @@ def city_from_mapping(data: dict[str, Any]) -> CityState:
             "people",
             "households",
             "organizations",
+            "sector_market_balances",
             "pending_effects",
         }
     }
@@ -173,6 +178,10 @@ def city_from_mapping(data: dict[str, Any]) -> CityState:
             "organizations": _organizations_from_sequence(
                 organizations_data,
                 "city organizations",
+            ),
+            "sector_market_balances": _sector_market_balances_from_sequence(
+                sector_market_balances_data,
+                "city sector_market_balances",
             ),
             "pending_effects": _delayed_effects_from_sequence(
                 pending_effects_data,
@@ -579,6 +588,21 @@ def _service_languages_from_sequence(
             _dataclass_from_mapping(ServiceLanguage, language_data, item_label)
         )
     return tuple(service_languages)
+
+
+def _sector_market_balances_from_sequence(
+    data: list[Any] | tuple[Any, ...],
+    label: str,
+) -> tuple[SectorMarketBalance, ...]:
+    balances: list[SectorMarketBalance] = []
+    for index, value in enumerate(data):
+        item_label = f"{label}[{index}]"
+        if not isinstance(value, dict):
+            raise ScenarioError(f"{item_label} must be an object")
+        balance_data = dict(value)
+        _tupleize(balance_data, ("notes",))
+        balances.append(_dataclass_from_mapping(SectorMarketBalance, balance_data, item_label))
+    return tuple(balances)
 
 
 def _delayed_effects_from_sequence(

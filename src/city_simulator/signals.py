@@ -92,6 +92,55 @@ def add_language_access_signals(context: SignalContext, ledger: SignalLedger) ->
         )
 
 
+def add_sector_market_signals(context: SignalContext, ledger: SignalLedger) -> None:
+    for balance in context.state.sector_market_balances:
+        label = f"{balance.sector} {balance.good_or_service}".strip()
+        local_gap = balance.local_supply_gap
+        if local_gap > 0:
+            ledger.add(
+                "sector_local_supply_gap",
+                local_gap,
+                f"{label} demand exceeds local supply before imports or substitution.",
+                driver_categories=(DRIVER_MARKET, DRIVER_SUPPLY_CHAIN),
+            )
+        if balance.imports > 0:
+            ledger.add(
+                "regional_import_dependency",
+                balance.imports,
+                f"{label} relies on imports from outside the city.",
+                driver_categories=(DRIVER_REGIONAL, DRIVER_SUPPLY_CHAIN, DRIVER_MARKET),
+            )
+        unmet = balance.effective_unmet_demand
+        if unmet > 0:
+            ledger.add(
+                "sector_unmet_demand",
+                unmet,
+                f"{label} demand remains unmet after local supply, imports, inventory, and substitution.",
+                driver_categories=(DRIVER_MARKET, DRIVER_SUPPLY_CHAIN, DRIVER_REGIONAL),
+            )
+        if balance.price_pressure > 0:
+            ledger.add(
+                "sector_price_pressure",
+                balance.price_pressure,
+                f"{label} has price pressure from demand, supply, or logistics constraints.",
+                driver_categories=(DRIVER_MARKET, DRIVER_SUPPLY_CHAIN),
+            )
+        if balance.wait_pressure > 0:
+            ledger.add(
+                "sector_wait_pressure",
+                balance.wait_pressure,
+                f"{label} has wait pressure from constrained service capacity.",
+                driver_categories=(DRIVER_MARKET, DRIVER_INSTITUTIONAL),
+            )
+        if balance.utilization >= 0.95:
+            ledger.add(
+                "sector_capacity_strain",
+                balance.utilization * 100,
+                f"{label} is operating near or above practical capacity.",
+                driver_categories=(DRIVER_MARKET, DRIVER_INSTITUTIONAL),
+            )
+
+
 SIGNAL_CONCEPTS: tuple[SignalConcept, ...] = (
     SignalConcept(
         name="seasonal_heat_cascade",
@@ -135,6 +184,25 @@ SIGNAL_CONCEPTS: tuple[SignalConcept, ...] = (
             "multilingual_bridge_capacity",
         ),
         collect=add_language_access_signals,
+    ),
+    SignalConcept(
+        name="sector_market_balance",
+        need=(
+            "Expose sector demand, local supply, imports, exports, inventory or capacity "
+            "drawdown, substitution, unmet demand, and price or wait pressure before "
+            "business, service, or sentiment outcomes consume them."
+        ),
+        inputs=("state.sector_market_balances",),
+        outputs=("SignalLedger",),
+        channels=(
+            "sector_local_supply_gap",
+            "regional_import_dependency",
+            "sector_unmet_demand",
+            "sector_price_pressure",
+            "sector_wait_pressure",
+            "sector_capacity_strain",
+        ),
+        collect=add_sector_market_signals,
     ),
 )
 

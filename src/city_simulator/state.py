@@ -276,6 +276,51 @@ class SignalLedger:
 
 
 @dataclass(frozen=True)
+class SectorMarketBalance:
+    sector: str
+    good_or_service: str
+    local_demand: float = 0.0
+    local_supply: float = 0.0
+    imports: float = 0.0
+    exports: float = 0.0
+    inventory_or_capacity_drawdown: float = 0.0
+    substitution: float = 0.0
+    unmet_demand: float = 0.0
+    price_pressure: float = 0.0
+    wait_pressure: float = 0.0
+    utilization: float = 0.0
+    notes: tuple[str, ...] = ()
+
+    @property
+    def accounted_supply(self) -> float:
+        return (
+            self.local_supply
+            + self.imports
+            + self.inventory_or_capacity_drawdown
+            + self.substitution
+            - self.exports
+        )
+
+    @property
+    def local_supply_gap(self) -> float:
+        return max(self.local_demand - self.local_supply, 0.0)
+
+    @property
+    def computed_unmet_demand(self) -> float:
+        return max(self.local_demand - self.accounted_supply, 0.0)
+
+    @property
+    def effective_unmet_demand(self) -> float:
+        return max(self.unmet_demand, self.computed_unmet_demand)
+
+    @property
+    def import_share(self) -> float:
+        if self.local_demand <= 0:
+            return 0.0
+        return self.imports / self.local_demand
+
+
+@dataclass(frozen=True)
 class FinancialInstitutionProfile:
     institution_type: str = "unspecified"
     charter: str = "unspecified"
@@ -367,6 +412,7 @@ class CityState:
     people: tuple[PersonAgent, ...] = ()
     households: tuple[HouseholdAgent, ...] = ()
     organizations: tuple[OrganizationAgent, ...] = ()
+    sector_market_balances: tuple[SectorMarketBalance, ...] = ()
     housing_stock: HousingStock = HousingStock()
     housing_assistance: HousingAssistance = HousingAssistance()
     housing_units: float = 43_000
