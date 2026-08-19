@@ -63,9 +63,13 @@ from city_simulator.scenario import ScenarioError, load_city, load_scenario
 from city_simulator.starter import STARTER_PRESETS, starter_city, write_starter_city
 from city_simulator.synthetic_city import (
     SyntheticGroupProfile,
+    SyntheticHouseholdMemberProfile,
+    SyntheticMixedHouseholdProfile,
+    SyntheticPopulationProfile,
     generate_grouped_synthetic_population,
     generate_synthetic_city,
     synthetic_group_profiles_from_mapping,
+    synthetic_population_profile_from_mapping,
 )
 from city_simulator.views import (
     InventoryStatusView,
@@ -138,6 +142,9 @@ __all__ = [
     "ServiceLanguage",
     "SignalLedger",
     "SyntheticGroupProfile",
+    "SyntheticHouseholdMemberProfile",
+    "SyntheticMixedHouseholdProfile",
+    "SyntheticPopulationProfile",
     "SyntheticPopulationRecipe",
     "SyntheticPopulationSourceProfile",
     "TradeSchoolProgram",
@@ -165,6 +172,7 @@ __all__ = [
     "simulate",
     "starter_city",
     "synthetic_group_profiles_from_mapping",
+    "synthetic_population_profile_from_mapping",
     "trade_school_program_for",
     "weighted_college_program_for",
     "write_starter_city",

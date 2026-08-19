@@ -27,12 +27,12 @@ def test_generate_family_agents_uses_heritage_name_bank():
         neighborhood="summer_crescent_boulevard",
     )
 
-    assert family.household.agent_id == "hernandez"
+    assert family.household.agent_id == "household-0001-hernandez"
     assert family.household.member_ids == (
-        "juan-hernandez-1",
-        "louise-hernandez-2",
-        "renee-hernandez-3",
-        "jose-hernandez-4",
+        "person-0001-01-juan-hernandez",
+        "person-0001-02-louise-hernandez",
+        "person-0001-03-renee-hernandez",
+        "person-0001-04-jose-hernandez",
     )
     assert [person.display_name for person in family.people] == [
         "Juan Hernandez",
@@ -40,7 +40,7 @@ def test_generate_family_agents_uses_heritage_name_bank():
         "Renee Hernandez",
         "Jose Hernandez",
     ]
-    assert all(person.household_id == "hernandez" for person in family.people)
+    assert all(person.household_id == "household-0001-hernandez" for person in family.people)
     assert all(person.neighborhood == "summer_crescent_boulevard" for person in family.people)
     assert family.support_need == 4
     assert family.support_capacity == 6
@@ -53,7 +53,7 @@ def test_generate_family_agents_is_deterministic_by_heritage_and_index():
     second = generate_family_agents("jewish", household_index=2, adults=1, children=1)
 
     assert first == second
-    assert first.household.agent_id == "levine"
+    assert first.household.agent_id == "household-0003-levine"
     assert first.people[0].display_name == "Ari Levine"
 
 
@@ -71,14 +71,17 @@ def test_generate_family_agents_supports_dmv_heritage_name_banks():
         "israeli arab": "israeli_arab",
         "french": "french",
         "spanish": "spanish",
+        "latino": "latino",
         "mexican": "mexican",
         "guatemalan": "guatemalan",
         "brazilian": "brazilian",
         "portuguese": "portuguese",
         "canadian": "canadian",
+        "american": "american",
         "romanian": "romanian",
         "polish": "polish",
         "bulgarian": "bulgarian",
+        "black american": "black_american",
         "nigerian": "nigerian",
         "cameroon": "cameroonian",
         "haitian": "haitian",
@@ -139,7 +142,10 @@ def test_adopted_child_keeps_birth_identity_but_uses_raised_culture_name():
     assert child.adoption.birth_parent_cultures == ("hispanic", "jewish")
     assert child.adoption.adoptive_parent_ethnicities == ("anglo",)
     assert child.adoption.raised_cultures == ("anglo",)
-    assert child.parent_ids == ("dorothy-jones-1", "ron-jones-2")
+    assert child.parent_ids == (
+        "person-0001-01-dorothy-jones",
+        "person-0001-02-ron-jones",
+    )
 
 
 def test_generate_family_agents_marks_retail_parent_under_housing_strain():
@@ -201,20 +207,20 @@ def test_generate_family_population_returns_families_before_people():
     )
 
     assert [family.household.agent_id for family in population.families] == [
-        "hernandez",
-        "harcourt",
+        "household-0001-hernandez",
+        "household-0002-harcourt",
     ]
     assert [household.agent_id for household in population.households] == [
-        "hernandez",
-        "harcourt",
+        "household-0001-hernandez",
+        "household-0002-harcourt",
     ]
     assert [person.household_id for person in population.people] == [
-        "hernandez",
-        "hernandez",
-        "hernandez",
-        "hernandez",
-        "harcourt",
-        "harcourt",
+        "household-0001-hernandez",
+        "household-0001-hernandez",
+        "household-0001-hernandez",
+        "household-0001-hernandez",
+        "household-0002-harcourt",
+        "household-0002-harcourt",
     ]
     assert population.organizations == ()
 
@@ -565,7 +571,7 @@ def test_generate_family_agents_creates_organizations_for_business_owners():
     assert len(family.organizations) == 1
     assert family.organizations[0].organization_type == "business"
     assert family.organizations[0].sector == "landscaping"
-    assert family.organizations[0].owner_ids == ("juan-hernandez-1",)
+    assert family.organizations[0].owner_ids == ("person-0001-01-juan-hernandez",)
     assert family.organizations[0].customer_types == (
         "residents",
         "businesses",
@@ -612,8 +618,8 @@ def test_generate_family_population_returns_businesses_after_people():
         )
     )
 
-    assert population.households[0].agent_id == "hernandez"
-    assert population.people[0].household_id == "hernandez"
+    assert population.households[0].agent_id == "household-0001-hernandez"
+    assert population.people[0].household_id == "household-0001-hernandez"
     assert population.organizations[0].sector == "landscaping"
 
 

@@ -28,8 +28,9 @@ from city_simulator.starter import (
 from city_simulator.storage import city_path, ensure_data_dirs, saved_cities
 from city_simulator.synthetic_city import (
     SyntheticGroupProfile,
+    SyntheticPopulationProfile,
     generate_synthetic_city,
-    synthetic_group_profiles_from_mapping,
+    synthetic_population_profile_from_mapping,
 )
 
 
@@ -115,9 +116,11 @@ def main(argv: list[str] | None = None) -> int:
                     json.dump(asdict(city), handle, indent=2)
                     handle.write("\n")
             elif args.synthetic:
+                synthetic_profile = _synthetic_profile(args.synthetic_profile)
                 city = generate_synthetic_city(
                     args.people,
-                    group_profiles=_synthetic_group_profiles(args.synthetic_profile),
+                    group_profiles=synthetic_profile.groups,
+                    mixed_households=synthetic_profile.mixed_households,
                 )
                 save_city(args.path, city)
             else:
@@ -178,8 +181,12 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _synthetic_group_profiles(path: str | None) -> tuple[SyntheticGroupProfile, ...]:
+    return _synthetic_profile(path).groups
+
+
+def _synthetic_profile(path: str | None) -> SyntheticPopulationProfile:
     if path is None:
-        return ()
+        return SyntheticPopulationProfile(groups=())
     try:
         with open(path, encoding="utf-8") as handle:
             data = json.load(handle)
@@ -187,7 +194,7 @@ def _synthetic_group_profiles(path: str | None) -> tuple[SyntheticGroupProfile, 
         raise ValueError(f"could not read synthetic profile {path}: {exc}") from exc
     if not isinstance(data, dict):
         raise TypeError("synthetic profile must contain a JSON object")
-    return synthetic_group_profiles_from_mapping(data)
+    return synthetic_population_profile_from_mapping(data)
 
 
 def _play(args: argparse.Namespace, input_func=None, output_func=print) -> int:

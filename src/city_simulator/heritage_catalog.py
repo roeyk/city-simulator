@@ -7,6 +7,16 @@ HERITAGE_NAME_BANKS: dict[str, HeritageNameBank] = {
         "adult": ("Dorothy", "Ron", "Jane", "John", "Anne", "Robert"),
         "child": ("Morty", "Emily", "Thomas", "Grace", "Henry", "Claire"),
     },
+    "american": {
+        "family": ("Smith", "Taylor", "Anderson", "Parker", "Morgan"),
+        "adult": ("Michael", "Sarah", "David", "Laura", "Chris", "Rebecca"),
+        "child": ("Avery", "Mason", "Harper", "Logan", "Ella", "Caleb"),
+    },
+    "black_american": {
+        "family": ("Johnson", "Williams", "Brown", "Davis", "Robinson"),
+        "adult": ("James", "Angela", "Marcus", "Denise", "Malcolm", "Tanya"),
+        "child": ("Jordan", "Maya", "Elijah", "Zoe", "Isaiah", "Nia"),
+    },
     "brazilian": {
         "family": ("Silva", "Santos", "Oliveira", "Pereira", "Costa"),
         "adult": ("Joao", "Mariana", "Lucas", "Camila", "Rafael", "Ana"),
@@ -82,6 +92,11 @@ HERITAGE_NAME_BANKS: dict[str, HeritageNameBank] = {
         "adult": ("Yossi", "Miriam", "Ari", "Leah", "Noam", "Talia"),
         "child": ("Eli", "Naomi", "Avi", "Maya", "Dina", "Jonah"),
     },
+    "latino": {
+        "family": ("Hernandez", "Garcia", "Martinez", "Lopez", "Rivera"),
+        "adult": ("Juan", "Marisol", "Carlos", "Elena", "Miguel", "Rosa"),
+        "child": ("Sofia", "Diego", "Lucia", "Mateo", "Valeria", "Emilio"),
+    },
     "korean": {
         "family": ("Kim", "Lee", "Park", "Choi", "Jung"),
         "adult": ("Minjun", "Jisoo", "Hyun", "Soojin", "Jiho", "Hana"),
@@ -141,6 +156,9 @@ HERITAGE_NAME_BANKS: dict[str, HeritageNameBank] = {
 
 
 HERITAGE_ALIASES: dict[str, str] = {
+    "african american": "black_american",
+    "black american": "black_american",
+    "black-american": "black_american",
     "cameroon": "cameroonian",
     "camaroon": "cameroonian",
     "guatamalan": "guatemalan",
@@ -151,6 +169,8 @@ HERITAGE_ALIASES: dict[str, str] = {
 
 HERITAGE_LANGUAGES: dict[str, tuple[str, ...]] = {
     "anglo": ("english",),
+    "american": ("english",),
+    "black_american": ("english",),
     "brazilian": ("portuguese",),
     "bulgarian": ("bulgarian",),
     "cameroonian": ("english", "french"),
@@ -167,6 +187,7 @@ HERITAGE_LANGUAGES: dict[str, tuple[str, ...]] = {
     "japanese": ("japanese",),
     "jewish": ("english", "hebrew"),
     "korean": ("korean",),
+    "latino": ("english", "spanish"),
     "mexican": ("spanish",),
     "nigerian": ("english",),
     "polish": ("polish",),

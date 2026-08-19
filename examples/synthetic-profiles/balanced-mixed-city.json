@@ -1,0 +1,64 @@
+{
+  "groups": [
+    {
+      "heritage": "anglo",
+      "population_share": 45,
+      "income_bands": {
+        "low": 20,
+        "middle": 55,
+        "high": 25
+      },
+      "job_pools": {
+        "private_service": 45,
+        "city_service": 25,
+        "business_owner": 15,
+        "government": 15
+      }
+    },
+    {
+      "heritage": "hispanic",
+      "population_share": 30,
+      "income_bands": {
+        "low": 35,
+        "middle": 50,
+        "high": 15
+      },
+      "job_pools": {
+        "private_service": 45,
+        "city_service": 25,
+        "government": 20,
+        "business_owner": 10
+      }
+    },
+    {
+      "heritage": "vietnamese",
+      "population_share": 15,
+      "income_bands": {
+        "low": 25,
+        "middle": 55,
+        "high": 20
+      },
+      "job_pools": {
+        "private_service": 40,
+        "government": 25,
+        "business_owner": 20,
+        "city_service": 15
+      }
+    },
+    {
+      "heritage": "haitian",
+      "population_share": 10,
+      "income_bands": {
+        "low": 35,
+        "middle": 50,
+        "high": 15
+      },
+      "job_pools": {
+        "private_service": 50,
+        "city_service": 25,
+        "government": 20,
+        "business_owner": 5
+      }
+    }
+  ]
+}

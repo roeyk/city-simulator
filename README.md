@@ -127,6 +127,17 @@ weights:
       "income_bands": {"low": 45, "middle": 55},
       "vocations": {"city_service": 50, "private_service": 50}
     }
+  ],
+  "mixed_households": [
+    {
+      "count": 1,
+      "members": [
+        {"heritage": "american", "income_band": "middle", "age": 42},
+        {"heritage": "latino", "income_band": "low", "age": 39},
+        {"heritage": "american", "income_band": "middle", "age": 11}
+      ],
+      "job_pools": {"private_service": 100}
+    }
   ]
 }
 ```
@@ -136,6 +147,16 @@ PYTHONPATH=src python3 -m city_simulator init-city profiled-test \
   --synthetic \
   --people 100 \
   --synthetic-profile profile.json
+```
+
+Reusable test profiles live in `examples/synthetic-profiles/`. They are
+deterministic fixture inputs, not calibrated population estimates. For example:
+
+```bash
+PYTHONPATH=src python3 -m city_simulator init-city language-access-test \
+  --synthetic \
+  --people 120 \
+  --synthetic-profile examples/synthetic-profiles/language-access-stress.json
 ```
 
 Run one scenario against a city:

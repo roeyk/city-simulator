@@ -729,6 +729,7 @@ def test_save_city_round_trips_named_city(tmp_path, monkeypatch):
                     "sector": "plumbing_services",
                     "display_name": "Jose Plumbing Services",
                     "owner_ids": ["person-1"],
+                    "employee_ids": ["person-1"],
                     "founded_year": 2019,
                     "customer_types": ["residents", "businesses"],
                     "service_languages": [
@@ -912,6 +913,7 @@ def test_save_city_round_trips_named_city(tmp_path, monkeypatch):
     assert load_city("roundtrip").households[0].household_languages == ("spanish",)
     assert load_city("roundtrip").organizations[0].organization_type == "university"
     assert load_city("roundtrip").organizations[1].owner_ids == ("person-1",)
+    assert load_city("roundtrip").organizations[1].employee_ids == ("person-1",)
     assert load_city("roundtrip").organizations[1].founded_year == 2019
     assert load_city("roundtrip").organizations[1].customer_types == (
         "residents",

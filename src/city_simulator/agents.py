@@ -288,6 +288,7 @@ class OrganizationAgent(Agent):
     operating_budget: float = 0.0
     display_name: str = ""
     owner_ids: tuple[str, ...] = ()
+    employee_ids: tuple[str, ...] = ()
     founded_year: int | None = None
     customer_types: tuple[str, ...] = ()
     service_languages: tuple[ServiceLanguage, ...] = ()

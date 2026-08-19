@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from city_simulator.agents import (
     AdoptionIdentity,
     CulturalIdentity,
+    EducationHistory,
+    EmploymentRecord,
     HouseholdAgent,
     OrganizationAgent,
     PersonAgent,
@@ -31,6 +33,9 @@ class GeneratedFamily:
 class FamilyGenerationSpec:
     heritage: str
     birth_heritages: tuple[str, ...] = ()
+    member_heritages: tuple[str, ...] = ()
+    member_income_bands: tuple[str, ...] = ()
+    member_ages: tuple[int | None, ...] = ()
     household_index: int = 0
     adults: int = 2
     children: int = 0
@@ -41,9 +46,11 @@ class FamilyGenerationSpec:
     adult_roles: tuple[str, ...] = ()
     adult_jobs: tuple[JobTemplate, ...] = ()
     job_pools: tuple[str, ...] = ()
+    adult_income_bands: tuple[str, ...] = ()
     adult_ages: tuple[int, ...] = ()
     adult_education: tuple[str, ...] = ()
     adult_experience_years: tuple[int, ...] = ()
+    preserve_income_band: bool = False
 
 
 @dataclass(frozen=True)
@@ -217,6 +224,12 @@ def generate_synthetic_population(
                     _weighted_label(recipe.job_pools, household_index + index)
                     for index in range(adults)
                 ),
+                adult_income_bands=_synthetic_adult_income_bands(
+                    recipe.income_bands,
+                    income_band,
+                    household_index,
+                    adults,
+                ),
                 adult_ages=adult_ages,
                 adult_education=adult_education,
                 adult_experience_years=tuple(
@@ -243,6 +256,9 @@ def generate_family_population(
         generate_family_agents(
             spec.heritage,
             birth_heritages=spec.birth_heritages,
+            member_heritages=spec.member_heritages,
+            member_income_bands=spec.member_income_bands,
+            member_ages=spec.member_ages,
             household_index=spec.household_index,
             adults=spec.adults,
             children=spec.children,
@@ -253,9 +269,11 @@ def generate_family_population(
             adult_roles=spec.adult_roles,
             adult_jobs=spec.adult_jobs,
             job_pools=spec.job_pools,
+            adult_income_bands=spec.adult_income_bands,
             adult_ages=spec.adult_ages,
             adult_education=spec.adult_education,
             adult_experience_years=spec.adult_experience_years,
+            preserve_income_band=spec.preserve_income_band,
         )
         for spec in specs
     )
@@ -269,9 +287,20 @@ def generate_family_population(
     )
 
 
+def enrich_synthetic_population(
+    population: GeneratedFamilyPopulation,
+    mixed_household_pairs: int = 0,
+) -> GeneratedFamilyPopulation:
+    population = _mix_culture_households(population, mixed_household_pairs)
+    return _assign_schools_and_workplaces(population)
+
+
 def generate_family_agents(
     heritage: str,
     birth_heritages: tuple[str, ...] = (),
+    member_heritages: tuple[str, ...] = (),
+    member_income_bands: tuple[str, ...] = (),
+    member_ages: tuple[int | None, ...] = (),
     household_index: int = 0,
     adults: int = 2,
     children: int = 0,
@@ -282,9 +311,11 @@ def generate_family_agents(
     adult_roles: tuple[str, ...] = (),
     adult_jobs: tuple[JobTemplate, ...] = (),
     job_pools: tuple[str, ...] = (),
+    adult_income_bands: tuple[str, ...] = (),
     adult_ages: tuple[int, ...] = (),
     adult_education: tuple[str, ...] = (),
     adult_experience_years: tuple[int, ...] = (),
+    preserve_income_band: bool = False,
 ) -> GeneratedFamily:
     if adults < 0 or children < 0:
         raise ValueError("adults and children must be non-negative")
@@ -296,7 +327,7 @@ def generate_family_agents(
     names = _heritage_names(heritage)
     cultural_identity = _cultural_identity(heritage)
     family_name = _pick(names["family"], household_index)
-    household_id = _agent_id(family_name)
+    household_id = _household_id(family_name, household_index)
     ages = _adult_ages(household_index, adults, adult_ages)
     _validate_adult_ages(ages)
     jobs = _adult_jobs(
@@ -310,7 +341,7 @@ def generate_family_agents(
     support_need = _household_support_need(adults + children, housing_cost_band)
     support_capacity = _household_support_capacity(income_band, adults, adult_roles, jobs)
     support_gap = max(support_need - support_capacity, 0.0)
-    people = _adult_agents(
+    adult_people = _adult_agents(
         names,
         family_name,
         household_id,
@@ -320,12 +351,17 @@ def generate_family_agents(
         neighborhood,
         weight,
         adult_roles,
+        adult_income_bands,
         ages,
         jobs,
         adult_education,
         adult_experience_years,
         cultural_identity,
-    ) + _child_agents(
+        member_heritages,
+        member_income_bands,
+        preserve_income_band,
+    )
+    people = adult_people + _child_agents(
         names,
         family_name,
         household_id,
@@ -337,6 +373,10 @@ def generate_family_agents(
         weight,
         cultural_identity,
         birth_heritages,
+        member_heritages,
+        member_income_bands,
+        member_ages,
+        tuple(person.agent_id for person in adult_people),
     )
     return GeneratedFamily(
         household=HouseholdAgent(
@@ -365,32 +405,46 @@ def _adult_agents(
     neighborhood: str | None,
     weight: float,
     adult_roles: tuple[str, ...],
+    adult_income_bands: tuple[str, ...],
     adult_ages: tuple[int, ...],
     adult_jobs: tuple[JobTemplate, ...],
     adult_education: tuple[str, ...],
     adult_experience_years: tuple[int, ...],
     identity: CulturalIdentity,
+    member_heritages: tuple[str, ...],
+    member_income_bands: tuple[str, ...],
+    preserve_income_band: bool,
 ) -> tuple[PersonAgent, ...]:
     people: list[PersonAgent] = []
     for index in range(count):
-        given = _pick(names["adult"], household_index + index)
+        person_identity = _member_identity(identity, member_heritages, index)
+        person_names = _member_names(names, member_heritages, index)
+        given = _pick(person_names["adult"], household_index + index)
         job = _adult_job(adult_jobs, index)
+        education = _adult_education(adult_education, index)
+        experience_years = _adult_experience_years(adult_experience_years, index)
+        person_income_band = _adult_person_income_band(
+            _member_income_band(income_band, member_income_bands, index),
+            adult_income_bands,
+            job,
+            education,
+            experience_years,
+            index,
+            preserve_income_band,
+        )
+        employment_history = _current_employment_history(job)
         people.append(
             PersonAgent(
-                _agent_id(given, family_name, str(index + 1)),
+                _person_id(given, family_name, household_index, index),
                 household_id=household_id,
                 display_name=f"{given} {family_name}",
                 age=adult_ages[index],
-                income_band=_adult_generated_income_band(
-                    income_band,
-                    job,
-                    _adult_education(adult_education, index),
-                    _adult_experience_years(adult_experience_years, index),
-                ),
+                income_band=person_income_band,
                 employment_status=job.employment_status if job else "employed",
                 role=job.role if job else _adult_role(adult_roles, index),
                 neighborhood=neighborhood,
-                identity=identity,
+                identity=person_identity,
+                employment_history=employment_history,
                 weight=weight,
             )
         )
@@ -409,29 +463,29 @@ def _child_agents(
     weight: float,
     raised_identity: CulturalIdentity,
     birth_heritages: tuple[str, ...],
+    member_heritages: tuple[str, ...],
+    member_income_bands: tuple[str, ...],
+    member_ages: tuple[int | None, ...],
+    parent_ids: tuple[str, ...],
 ) -> tuple[PersonAgent, ...]:
     people: list[PersonAgent] = []
     for index in range(count):
-        given = _pick(names["child"], household_index + index)
+        member_index = adult_count + index
+        child_identity = _member_identity(raised_identity, member_heritages, member_index)
+        child_names = _member_names(names, member_heritages, member_index)
+        given = _pick(child_names["child"], household_index + index)
         people.append(
             PersonAgent(
-                _agent_id(given, family_name, str(adult_count + index + 1)),
+                _person_id(given, family_name, household_index, member_index),
                 household_id=household_id,
                 display_name=f"{given} {family_name}",
-                age=4 + ((household_index + index) % 14),
-                income_band=income_band,
+                age=_child_age(member_ages, member_index, household_index, index),
+                income_band=_member_income_band(income_band, member_income_bands, member_index),
                 employment_status="student",
                 neighborhood=neighborhood,
-                parent_ids=tuple(
-                    _agent_id(
-                        _pick(names["adult"], household_index + parent_index),
-                        family_name,
-                        str(parent_index + 1),
-                    )
-                    for parent_index in range(adult_count)
-                ),
-                identity=raised_identity,
-                adoption=_adoption_identity(raised_identity, birth_heritages),
+                parent_ids=parent_ids,
+                identity=child_identity,
+                adoption=_adoption_identity(child_identity, birth_heritages),
                 weight=weight,
             )
         )
@@ -442,6 +496,16 @@ def _heritage_names(heritage: str) -> dict[str, tuple[str, ...]]:
     return heritage_names(heritage)
 
 
+def _member_names(
+    fallback_names: dict[str, tuple[str, ...]],
+    member_heritages: tuple[str, ...],
+    index: int,
+) -> dict[str, tuple[str, ...]]:
+    if index >= len(member_heritages):
+        return fallback_names
+    return heritage_names(member_heritages[index])
+
+
 def _cultural_identity(heritage: str) -> CulturalIdentity:
     key = canonical_heritage(heritage)
     return CulturalIdentity(
@@ -449,6 +513,37 @@ def _cultural_identity(heritage: str) -> CulturalIdentity:
         cultures=(key,),
         languages=_heritage_languages(key),
     )
+
+
+def _member_identity(
+    fallback_identity: CulturalIdentity,
+    member_heritages: tuple[str, ...],
+    index: int,
+) -> CulturalIdentity:
+    if index >= len(member_heritages):
+        return fallback_identity
+    return _cultural_identity(member_heritages[index])
+
+
+def _member_income_band(
+    fallback_income_band: str,
+    member_income_bands: tuple[str, ...],
+    index: int,
+) -> str:
+    if index >= len(member_income_bands):
+        return fallback_income_band
+    return member_income_bands[index]
+
+
+def _child_age(
+    member_ages: tuple[int | None, ...],
+    member_index: int,
+    household_index: int,
+    child_index: int,
+) -> int:
+    if member_index < len(member_ages) and member_ages[member_index] is not None:
+        return member_ages[member_index]
+    return 4 + ((household_index + child_index) % 14)
 
 
 def _heritage_languages(heritage: str) -> tuple[str, ...]:
@@ -513,6 +608,20 @@ def _synthetic_education(income_band: str, index: int) -> str:
     return _weighted_label(choices, index)
 
 
+def _synthetic_adult_income_bands(
+    income_bands: tuple[tuple[str, float], ...],
+    household_income_band: str,
+    household_index: int,
+    adult_count: int,
+) -> tuple[str, ...]:
+    if adult_count < 2 or household_index % 3:
+        return ()
+    return tuple(
+        _weighted_label(income_bands, household_index + index)
+        for index in range(adult_count)
+    )
+
+
 def _community_organizations(
     people: tuple[PersonAgent, ...],
     recipe: SyntheticPopulationRecipe,
@@ -541,6 +650,290 @@ def _community_organizations(
             )
         )
     return tuple(organizations)
+
+
+def _mix_culture_households(
+    population: GeneratedFamilyPopulation,
+    mixed_household_pairs: int,
+) -> GeneratedFamilyPopulation:
+    if mixed_household_pairs <= 0:
+        return population
+    people_by_id = {person.agent_id: person for person in population.people}
+    households = list(population.households)
+    people = list(population.people)
+    people_index = {person.agent_id: index for index, person in enumerate(people)}
+    candidate_ids = [
+        household.agent_id
+        for household in households
+        if len(household.member_ids) >= 2
+        and all(people_by_id[person_id].age >= 18 for person_id in household.member_ids[:2])
+    ]
+    mixed = 0
+    for left_id, right_id in zip(candidate_ids[::2], candidate_ids[1::2], strict=False):
+        if mixed >= mixed_household_pairs:
+            break
+        left = next(household for household in households if household.agent_id == left_id)
+        right = next(household for household in households if household.agent_id == right_id)
+        left_person = people_by_id[left.member_ids[1]]
+        right_person = people_by_id[right.member_ids[1]]
+        if left_person.identity.cultures == right_person.identity.cultures:
+            continue
+        swapped_left = replace(left_person, household_id=right.agent_id)
+        swapped_right = replace(right_person, household_id=left.agent_id)
+        people[people_index[left_person.agent_id]] = swapped_left
+        people[people_index[right_person.agent_id]] = swapped_right
+        people_by_id[left_person.agent_id] = swapped_left
+        people_by_id[right_person.agent_id] = swapped_right
+        households[households.index(left)] = replace(
+            left,
+            member_ids=tuple(
+                right_person.agent_id if person_id == left_person.agent_id else person_id
+                for person_id in left.member_ids
+            ),
+        )
+        households[households.index(right)] = replace(
+            right,
+            member_ids=tuple(
+                left_person.agent_id if person_id == right_person.agent_id else person_id
+                for person_id in right.member_ids
+            ),
+        )
+        mixed += 1
+    return GeneratedFamilyPopulation(
+        families=population.families,
+        households=tuple(households),
+        people=tuple(people),
+        organizations=population.organizations,
+    )
+
+
+def _assign_schools_and_workplaces(
+    population: GeneratedFamilyPopulation,
+) -> GeneratedFamilyPopulation:
+    baseline_organizations = (
+        _school_organizations()
+        + _civic_employer_organizations()
+        + _basic_city_employer_organizations()
+    )
+    organizations = list(population.organizations + baseline_organizations)
+    organization_index = {organization.agent_id: index for index, organization in enumerate(organizations)}
+    business_ids = [
+        organization.agent_id
+        for organization in organizations
+        if organization.organization_type == "business"
+    ]
+    owner_business_by_person = {
+        owner_id: organization.agent_id
+        for organization in organizations
+        for owner_id in organization.owner_ids
+    }
+    people: list[PersonAgent] = []
+    employees_by_org: dict[str, list[str]] = {organization.agent_id: [] for organization in organizations}
+    for index, person in enumerate(population.people):
+        updated = _assign_school(person)
+        workplace_id = _workplace_for(updated, business_ids, owner_business_by_person, index)
+        if workplace_id:
+            employees_by_org.setdefault(workplace_id, []).append(updated.agent_id)
+            updated = _assign_workplace(updated, workplace_id)
+        people.append(updated)
+    for organization_id, employee_ids in employees_by_org.items():
+        if not employee_ids:
+            continue
+        organization = organizations[organization_index[organization_id]]
+        organizations[organization_index[organization_id]] = replace(
+            organization,
+            employee_ids=tuple(dict.fromkeys(organization.employee_ids + tuple(employee_ids))),
+            staff=max(organization.staff, float(len(employee_ids))),
+        )
+    return GeneratedFamilyPopulation(
+        families=population.families,
+        households=population.households,
+        people=tuple(people),
+        organizations=tuple(organizations),
+    )
+
+
+def _school_organizations() -> tuple[OrganizationAgent, ...]:
+    return (
+        OrganizationAgent(
+            "school-elementary-1",
+            organization_type="school",
+            sector="education",
+            display_name="Northbridge Elementary School",
+            customer_types=("children", "households"),
+        ),
+        OrganizationAgent(
+            "school-high-1",
+            organization_type="high_school",
+            sector="education",
+            display_name="Northbridge High School",
+            customer_types=("teenagers", "households"),
+        ),
+        OrganizationAgent(
+            "college-community-1",
+            organization_type="community_college",
+            sector="education",
+            display_name="Northbridge Community College",
+            customer_types=("students", "workers"),
+        ),
+    )
+
+
+def _civic_employer_organizations() -> tuple[OrganizationAgent, ...]:
+    return (
+        OrganizationAgent(
+            "mayor-office-1",
+            organization_type="government",
+            sector="public_administration",
+            display_name="Northbridge Mayor Office",
+            customer_types=("residents", "businesses", "institutions"),
+        ),
+        OrganizationAgent(
+            "city-council-1",
+            organization_type="government",
+            sector="public_administration",
+            display_name="Northbridge City Council",
+            customer_types=("residents", "businesses"),
+        ),
+        OrganizationAgent(
+            "city-planning-1",
+            organization_type="government",
+            sector="planning",
+            display_name="Northbridge Planning Department",
+            customer_types=("residents", "businesses", "developers"),
+        ),
+        OrganizationAgent(
+            "city-services-1",
+            organization_type="government",
+            sector="city_services",
+            display_name="Northbridge City Services",
+            customer_types=("residents", "businesses"),
+        ),
+        OrganizationAgent(
+            "city-hall-1",
+            organization_type="government",
+            sector="public_administration",
+            display_name="Northbridge City Hall",
+            customer_types=("residents", "businesses"),
+        ),
+    )
+
+
+def _basic_city_employer_organizations() -> tuple[OrganizationAgent, ...]:
+    return (
+        OrganizationAgent(
+            "grocery-1",
+            organization_type="grocery_store",
+            sector="grocery",
+            neighborhood="market_district",
+            display_name="Market District Grocery",
+            customer_types=("residents",),
+        ),
+        OrganizationAgent(
+            "restaurant-1",
+            organization_type="restaurant",
+            sector="food_service",
+            neighborhood="market_district",
+            display_name="Market District Diner",
+            customer_types=("residents", "visitors"),
+        ),
+        OrganizationAgent(
+            "hospital-1",
+            organization_type="hospital",
+            sector="medical",
+            neighborhood="summer_crescent_boulevard",
+            display_name="Crescent General Hospital",
+            customer_types=("residents", "regional_patients"),
+        ),
+        OrganizationAgent(
+            "school-district-1",
+            organization_type="school_district",
+            sector="education",
+            neighborhood="village_hills",
+            display_name="Village Hills Schools",
+            customer_types=("children", "households"),
+        ),
+        OrganizationAgent(
+            "warehouse-1",
+            organization_type="regional_warehouse",
+            sector="logistics",
+            neighborhood="market_district",
+            display_name="Market District Warehouse",
+            customer_types=("businesses", "institutions"),
+        ),
+    )
+
+
+def _assign_school(person: PersonAgent) -> PersonAgent:
+    if person.age < 14:
+        school_id = "school-elementary-1"
+    elif person.age < 18:
+        school_id = "school-high-1"
+    elif person.age <= 24:
+        school_id = "college-community-1"
+    else:
+        return person
+    return replace(
+        person,
+        current_school_id=school_id,
+        education_history=_education_history_with_school(person.education_history, school_id, person.age),
+    )
+
+
+def _education_history_with_school(
+    history: EducationHistory,
+    school_id: str,
+    age: int,
+) -> EducationHistory:
+    if school_id.startswith("school-elementary"):
+        return replace(history, grade_school_ids=(school_id,))
+    if school_id.startswith("school-high"):
+        return replace(history, high_school_ids=(school_id,))
+    return replace(history, college_ids=(school_id,))
+
+
+def _workplace_for(
+    person: PersonAgent,
+    business_ids: list[str],
+    owner_business_by_person: dict[str, str],
+    index: int,
+) -> str:
+    if person.employment_status == "student" or not person.role:
+        return ""
+    if person.employment_status == "business_owner":
+        return owner_business_by_person.get(person.agent_id, "")
+    if person.role == "mayor":
+        return "mayor-office-1"
+    if person.role in {"city council member", "legislative aide"}:
+        return "city-council-1"
+    if person.role in {"city planner", "building inspector"}:
+        return "city-planning-1"
+    if person.role in {"firefighter", "police officer", "waterworks operator"}:
+        return "city-services-1"
+    if person.role in {
+        "city judge",
+        "court clerk",
+        "public works administrator",
+    }:
+        return "city-hall-1"
+    if person.role in {"medical assistant"}:
+        return "hospital-1"
+    if person.role in {"retail salesperson"}:
+        return "grocery-1"
+    if person.role in {"restaurant server"}:
+        return "restaurant-1"
+    if person.role in {"bookkeeper"}:
+        return "warehouse-1"
+    if not business_ids:
+        return ""
+    return business_ids[index % len(business_ids)]
+
+
+def _assign_workplace(person: PersonAgent, workplace_id: str) -> PersonAgent:
+    history = person.employment_history
+    if history:
+        history = (replace(history[0], workplace_id=workplace_id),) + history[1:]
+    return replace(person, workplace_id=workplace_id, employment_history=history)
 
 
 def _weighted_label(values: tuple[tuple[str, float], ...], index: int) -> str:
@@ -600,6 +993,44 @@ def _weighted_target(index: int, total: float) -> int:
 
 def _agent_id(*parts: str) -> str:
     return "-".join(part.lower().replace(" ", "-") for part in parts if part)
+
+
+def _household_id(family_name: str, household_index: int) -> str:
+    return _agent_id("household", f"{household_index + 1:04d}", family_name)
+
+
+def _person_id(given: str, family_name: str, household_index: int, member_index: int) -> str:
+    return _agent_id("person", f"{household_index + 1:04d}", f"{member_index + 1:02d}", given, family_name)
+
+
+def _adult_person_income_band(
+    fallback_income_band: str,
+    adult_income_bands: tuple[str, ...],
+    job: JobTemplate | None,
+    education: str,
+    experience_years: int,
+    index: int,
+    preserve_income_band: bool,
+) -> str:
+    if adult_income_bands:
+        return adult_income_bands[index] if index < len(adult_income_bands) else fallback_income_band
+    if preserve_income_band:
+        return fallback_income_band
+    return _adult_generated_income_band(fallback_income_band, job, education, experience_years)
+
+
+def _current_employment_history(job: JobTemplate | None) -> tuple[EmploymentRecord, ...]:
+    if job is None:
+        return ()
+    return (
+        EmploymentRecord(
+            workplace_id="",
+            role=job.role,
+            start_year=0,
+            employment_status=job.employment_status,
+            sector=job.sector,
+        ),
+    )
 
 
 def _adult_role(roles: tuple[str, ...], index: int) -> str:
@@ -781,6 +1212,7 @@ def _business_organizations(
                 sector=job.sector,
                 display_name=f"{family_name} {job.sector.replace('_', ' ')}",
                 owner_ids=(people[index].agent_id,),
+                employee_ids=(people[index].agent_id,),
                 customer_types=job.serves,
                 notes=tuple(f"serves {customer}" for customer in job.serves),
             )

@@ -8,6 +8,7 @@ from city_simulator.person_generator import (
     FamilyGenerationSpec,
     GeneratedFamilyPopulation,
     SyntheticPopulationRecipe,
+    enrich_synthetic_population,
     generate_family_population,
     generate_synthetic_population,
 )
@@ -28,18 +29,40 @@ class SyntheticGroupProfile:
     job_pools: tuple[tuple[str, float], ...] = ()
 
 
+@dataclass(frozen=True)
+class SyntheticHouseholdMemberProfile:
+    heritage: str
+    income_band: str
+    age: int | None = None
+
+
+@dataclass(frozen=True)
+class SyntheticMixedHouseholdProfile:
+    members: tuple[SyntheticHouseholdMemberProfile, ...]
+    count: int = 1
+    job_pools: tuple[tuple[str, float], ...] = ()
+
+
+@dataclass(frozen=True)
+class SyntheticPopulationProfile:
+    groups: tuple[SyntheticGroupProfile, ...]
+    mixed_households: tuple[SyntheticMixedHouseholdProfile, ...] = ()
+
+
 def generate_synthetic_city(
     people: int = 30,
     recipe: SyntheticPopulationRecipe | None = None,
     group_profiles: tuple[SyntheticGroupProfile, ...] = (),
+    mixed_households: tuple[SyntheticMixedHouseholdProfile, ...] = (),
 ) -> CityState:
     if people <= 0:
         raise ValueError("people must be positive")
     population = (
-        generate_grouped_synthetic_population(people, group_profiles, recipe)
-        if group_profiles
+        generate_grouped_synthetic_population(people, group_profiles, recipe, mixed_households)
+        if group_profiles or mixed_households
         else generate_synthetic_population(people, recipe)
     )
+    population = enrich_synthetic_population(population)
     base = starter_city("balanced", population=float(people))
     return replace(
         base,
@@ -47,7 +70,10 @@ def generate_synthetic_city(
         demographics=_demographics_from_population(population),
         people=population.people,
         households=population.households,
-        organizations=population.organizations + _synthetic_anchor_organizations(),
+        organizations=_merge_organizations(
+            population.organizations,
+            _synthetic_anchor_organizations(),
+        ),
         sector_market_balances=_synthetic_sector_market_balances(float(people)),
         inventories=_synthetic_inventories(population),
     )
@@ -57,17 +83,29 @@ def generate_grouped_synthetic_population(
     count: int,
     group_profiles: tuple[SyntheticGroupProfile, ...],
     recipe: SyntheticPopulationRecipe | None = None,
+    mixed_households: tuple[SyntheticMixedHouseholdProfile, ...] = (),
 ) -> GeneratedFamilyPopulation:
     if count < 0:
         raise ValueError("count must be non-negative")
-    if not group_profiles:
-        raise ValueError("group_profiles must not be empty")
+    if not group_profiles and not mixed_households:
+        raise ValueError("group_profiles or mixed_households must not be empty")
     if recipe is None:
         recipe = SyntheticPopulationRecipe()
-    _validate_group_profiles(group_profiles)
-    target_counts = _group_target_counts(count, group_profiles)
+    if group_profiles:
+        _validate_group_profiles(group_profiles)
+    _validate_mixed_households(mixed_households)
     specs: list[FamilyGenerationSpec] = []
     household_index = 0
+    for mixed_profile in mixed_households:
+        for _ in range(mixed_profile.count):
+            specs.append(_mixed_household_spec(mixed_profile, recipe, household_index))
+            household_index += 1
+    remaining_count = count - sum(
+        len(mixed_profile.members) * mixed_profile.count for mixed_profile in mixed_households
+    )
+    if remaining_count < 0:
+        raise ValueError("mixed household members exceed requested people count")
+    target_counts = _group_target_counts(remaining_count, group_profiles) if group_profiles else ()
     for group, target_count in zip(group_profiles, target_counts, strict=True):
         remaining = target_count
         group_household_index = 0
@@ -98,12 +136,19 @@ def generate_grouped_synthetic_population(
                         )
                         for index in range(adults)
                     ),
+                    adult_income_bands=tuple(
+                        _weighted_label(group.income_bands, group_household_index + index)
+                        for index in range(adults)
+                    )
+                    if len(group.income_bands) > 1 and adults > 1
+                    else (),
                     adult_ages=adult_ages,
                     adult_education=tuple(
                         _synthetic_education(income_band, group_household_index + index)
                         for index in range(adults)
                     ),
                     adult_experience_years=tuple(max(age - 22, 1) for age in adult_ages),
+                    preserve_income_band=bool(group.income_bands),
                 )
             )
             remaining -= adults + children
@@ -147,6 +192,13 @@ def synthetic_group_profiles_from_mapping(data: dict[str, Any]) -> tuple[Synthet
             )
         )
     return tuple(profiles)
+
+
+def synthetic_population_profile_from_mapping(data: dict[str, Any]) -> SyntheticPopulationProfile:
+    return SyntheticPopulationProfile(
+        groups=synthetic_group_profiles_from_mapping(data),
+        mixed_households=_mixed_household_profiles_from_mapping(data),
+    )
 
 
 def _demographics_from_population(population: GeneratedFamilyPopulation) -> Demographics:
@@ -222,6 +274,28 @@ def _synthetic_anchor_organizations() -> tuple[OrganizationAgent, ...]:
             customer_types=("businesses", "institutions"),
         ),
     )
+
+
+def _merge_organizations(
+    primary: tuple[OrganizationAgent, ...],
+    overlays: tuple[OrganizationAgent, ...],
+) -> tuple[OrganizationAgent, ...]:
+    merged = {organization.agent_id: organization for organization in primary}
+    order = [organization.agent_id for organization in primary]
+    for overlay in overlays:
+        existing = merged.get(overlay.agent_id)
+        if existing is None:
+            merged[overlay.agent_id] = overlay
+            order.append(overlay.agent_id)
+            continue
+        merged[overlay.agent_id] = replace(
+            overlay,
+            owner_ids=tuple(dict.fromkeys(existing.owner_ids + overlay.owner_ids)),
+            employee_ids=tuple(dict.fromkeys(existing.employee_ids + overlay.employee_ids)),
+            staff=max(existing.staff, overlay.staff),
+            notes=tuple(dict.fromkeys(existing.notes + overlay.notes)),
+        )
+    return tuple(merged[agent_id] for agent_id in order)
 
 
 def _synthetic_sector_market_balances(people: float) -> tuple[SectorMarketBalance, ...]:
@@ -330,6 +404,139 @@ def _validate_group_profiles(group_profiles: tuple[SyntheticGroupProfile, ...]) 
             raise ValueError("group population shares must be non-negative")
         _validate_weighted_items(group.income_bands, "group income_bands")
         _validate_weighted_items(group.job_pools, "group job_pools")
+
+
+def _validate_mixed_households(
+    mixed_households: tuple[SyntheticMixedHouseholdProfile, ...],
+) -> None:
+    for index, mixed_household in enumerate(mixed_households):
+        if mixed_household.count <= 0:
+            raise ValueError(f"mixed_households[{index}].count must be positive")
+        if not mixed_household.members:
+            raise ValueError(f"mixed_households[{index}].members must not be empty")
+        _validate_weighted_items(
+            mixed_household.job_pools,
+            f"mixed_households[{index}].job_pools",
+        )
+        for member_index, member in enumerate(mixed_household.members):
+            if not member.heritage:
+                raise ValueError(
+                    f"mixed_households[{index}].members[{member_index}].heritage is required"
+                )
+            if member.income_band not in {"low", "middle", "high"}:
+                raise ValueError(
+                    f"mixed_households[{index}].members[{member_index}].income_band "
+                    "must be one of: high, low, middle"
+                )
+
+
+def _mixed_household_spec(
+    mixed_household: SyntheticMixedHouseholdProfile,
+    recipe: SyntheticPopulationRecipe,
+    household_index: int,
+) -> FamilyGenerationSpec:
+    adult_members = tuple(
+        member for member in mixed_household.members if member.age is None or member.age >= 18
+    )
+    child_members = tuple(
+        member for member in mixed_household.members if member.age is not None and member.age < 18
+    )
+    members = adult_members + child_members
+    if not adult_members:
+        raise ValueError("mixed households must include at least one adult")
+    income_band = _household_income_band(tuple(member.income_band for member in members))
+    neighborhood, housing_cost_band = _weighted_neighborhood(recipe.neighborhoods, household_index)
+    adult_ages = tuple(
+        member.age if member.age is not None else 30 + ((household_index + index) % 35)
+        for index, member in enumerate(adult_members)
+    )
+    adult_income_bands = tuple(member.income_band for member in adult_members)
+    return FamilyGenerationSpec(
+        members[0].heritage,
+        member_heritages=tuple(member.heritage for member in members),
+        member_income_bands=tuple(member.income_band for member in members),
+        member_ages=tuple(member.age for member in members),
+        household_index=household_index,
+        adults=len(adult_members),
+        children=len(child_members),
+        income_band=income_band,
+        neighborhood=neighborhood,
+        housing_cost_band=housing_cost_band,
+        job_pools=tuple(
+            _weighted_label(mixed_household.job_pools or recipe.job_pools, household_index + index)
+            for index in range(len(adult_members))
+        ),
+        adult_income_bands=adult_income_bands,
+        adult_ages=adult_ages,
+        adult_education=tuple(
+            _synthetic_education(member.income_band, household_index + index)
+            for index, member in enumerate(adult_members)
+        ),
+        adult_experience_years=tuple(max(age - 22, 1) for age in adult_ages),
+        preserve_income_band=True,
+    )
+
+
+def _household_income_band(member_income_bands: tuple[str, ...]) -> str:
+    if "high" in member_income_bands and "low" not in member_income_bands:
+        return "high"
+    if "middle" in member_income_bands or {"low", "high"} <= set(member_income_bands):
+        return "middle"
+    return "low"
+
+
+def _mixed_household_profiles_from_mapping(
+    data: dict[str, Any],
+) -> tuple[SyntheticMixedHouseholdProfile, ...]:
+    values = data.get("mixed_households", ())
+    if not isinstance(values, list | tuple):
+        raise TypeError("synthetic profile mixed_households must be an array")
+    profiles: list[SyntheticMixedHouseholdProfile] = []
+    for index, value in enumerate(values):
+        if not isinstance(value, dict):
+            raise TypeError(f"synthetic profile mixed_households[{index}] must be an object")
+        members_value = value.get("members")
+        if not isinstance(members_value, list | tuple):
+            raise TypeError(f"synthetic profile mixed_households[{index}].members must be an array")
+        count = value.get("count", 1)
+        if not isinstance(count, int):
+            raise TypeError(f"synthetic profile mixed_households[{index}].count must be an integer")
+        profiles.append(
+            SyntheticMixedHouseholdProfile(
+                members=tuple(
+                    _mixed_household_member_from_mapping(
+                        member,
+                        f"synthetic profile mixed_households[{index}].members[{member_index}]",
+                    )
+                    for member_index, member in enumerate(members_value)
+                ),
+                count=count,
+                job_pools=_weighted_items_from_mapping(
+                    value.get("job_pools", value.get("vocations", ())),
+                    f"synthetic profile mixed_households[{index}].job_pools",
+                ),
+            )
+        )
+    _validate_mixed_households(tuple(profiles))
+    return tuple(profiles)
+
+
+def _mixed_household_member_from_mapping(
+    value: Any,
+    label: str,
+) -> SyntheticHouseholdMemberProfile:
+    if not isinstance(value, dict):
+        raise TypeError(f"{label} must be an object")
+    heritage = str(value.get("heritage") or value.get("ethnicity") or "")
+    income_band = str(value.get("income_band") or value.get("class") or "")
+    age_value = value.get("age")
+    if not heritage:
+        raise ValueError(f"{label}.heritage is required")
+    if not income_band:
+        raise ValueError(f"{label}.income_band is required")
+    if age_value is not None and not isinstance(age_value, int):
+        raise TypeError(f"{label}.age must be an integer")
+    return SyntheticHouseholdMemberProfile(heritage=heritage, income_band=income_band, age=age_value)
 
 
 def _group_target_counts(

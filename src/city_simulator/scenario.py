@@ -569,7 +569,10 @@ def _organizations_from_sequence(
         if not isinstance(value, dict):
             raise ScenarioError(f"{item_label} must be an object")
         organization_data = dict(value)
-        _tupleize(organization_data, ("owner_ids", "customer_types", "notes"))
+        _tupleize(
+            organization_data,
+            ("owner_ids", "employee_ids", "customer_types", "notes"),
+        )
         organization_data["service_languages"] = _service_languages_from_sequence(
             organization_data.get("service_languages", ()),
             f"{item_label}.service_languages",
