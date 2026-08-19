@@ -41,7 +41,9 @@ def _parcel(state: CityState, parcel_id: str) -> Parcel:
 
 def _validate_grid(state: CityState) -> None:
     if state.parcel_grid.grid_type != "square":
-        raise ValueError(f"unsupported parcel grid type: {state.parcel_grid.grid_type}")
+        raise ValueError(
+            f"unsupported parcel grid type for distance calculations: {state.parcel_grid.grid_type}"
+        )
     if state.parcel_grid.width <= 0 or state.parcel_grid.height <= 0:
         raise ValueError("parcel grid width and height must be positive")
 

@@ -24,7 +24,7 @@ def test_sparse_square_parcel_grid_measures_distance_and_costs():
         parcel_grid=ParcelGrid(
             width=1000,
             height=1000,
-            cell_size_miles=0.2,
+            cell_size_meters=30,
             commute_minutes_per_grid_step=3.0,
             shipping_cost_per_grid_step=2.5,
         ),
@@ -46,6 +46,20 @@ def test_default_sparse_square_grid_has_million_parcel_coordinate_space():
     assert grid.grid_type == "square"
     assert grid.width == 1000
     assert grid.height == 1000
+    assert grid.cell_size_meters == 20.0
+
+
+def test_grid_shape_is_parameterized_but_distance_supports_square_first():
+    city = CityState(
+        parcel_grid=ParcelGrid(grid_type="hexagon"),
+        parcels={
+            "a": Parcel("a", grid_x=0, grid_y=0),
+            "b": Parcel("b", grid_x=1, grid_y=1),
+        },
+    )
+
+    with pytest.raises(ValueError, match="unsupported parcel grid type"):
+        parcel_grid_distance(city, "a", "b")
 
 
 def test_parcels_hold_multiple_agent_and_asset_occupants():
@@ -95,7 +109,7 @@ def test_city_from_mapping_reads_sparse_square_parcels_and_round_trips(tmp_path,
                 "grid_type": "square",
                 "width": 1000,
                 "height": 1000,
-                "cell_size_miles": 0.25,
+                "cell_size_meters": 25,
                 "origin_label": "southwest corner",
                 "commute_minutes_per_grid_step": 4,
                 "shipping_cost_per_grid_step": 3,
@@ -138,6 +152,7 @@ def test_city_from_mapping_reads_sparse_square_parcels_and_round_trips(tmp_path,
     loaded = load_city(saved_path)
 
     assert loaded.parcel_grid.width == 1000
+    assert loaded.parcel_grid.cell_size_meters == 25
     assert loaded.neighborhoods["downtown"].parcel_ids == ("p-1", "p-2")
     assert loaded.parcels["p-1"].parcel_id == "p-1"
     assert loaded.parcels["p-1"].zoning.allowed_uses == ("residential",)

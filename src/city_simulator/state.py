@@ -182,7 +182,7 @@ class ParcelGrid:
     grid_type: str = "square"
     width: int = 1000
     height: int = 1000
-    cell_size_miles: float = 0.1
+    cell_size_meters: float = 20.0
     origin_label: str = ""
     commute_minutes_per_grid_step: float = 2.5
     shipping_cost_per_grid_step: float = 1.25

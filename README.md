@@ -294,17 +294,22 @@ homeless shelters, transitional housing, permanent supportive housing, and
 homelessness prevention are modeled as assistance or service capacity, not as
 ordinary housing units.
 
-City files can also include a sparse square `parcel_grid`. The default grid is
-1,000 by 1,000 addressable coordinates, but only defined `parcels` are stored.
-Parcels carry `grid_x`/`grid_y` coordinates, neighborhood membership, zoning,
-land use, natural cover such as forest, plains, desert, pond, lake, ocean,
-river, or wetland, and a development stage such as pristine, conserved,
-undeveloped, vacant, agricultural, partly developed, underused, developing,
-fully developed, or redeveloping. People, households, organizations, place
-assets, and infrastructure placeholders can share the same parcel through
-occupancy records or `parcel_id` fields. Distance helpers use square-grid
-Manhattan distance as the first approximation for commute minutes and shipping
-costs. `ParcelDevelopmentView` rolls the same parcel records into
+City files can also include a sparse `parcel_grid`. The default grid is square,
+1,000 by 1,000 addressable coordinates, and uses 20-meter cells, but only
+defined `parcels` are stored. City creation or import flows can override
+`cell_size_meters` when a coarser or finer source map is appropriate, and
+`grid_type` records the intended shape. Distance helpers currently support
+`square` grids with Manhattan distance; future `hexagon` support should add
+axial-coordinate distance before using the same helpers. Parcels carry
+`grid_x`/`grid_y` coordinates, neighborhood membership, zoning, land use,
+natural cover such as forest, plains, desert, pond, lake, ocean, river, or
+wetland, and a development stage such as pristine, conserved, undeveloped,
+vacant, agricultural, partly developed, underused, developing, fully developed,
+or redeveloping. People, households, organizations, place assets, and
+infrastructure placeholders can share the same parcel through occupancy records
+or `parcel_id` fields. Distance helpers use square-grid Manhattan distance as
+the first approximation for commute minutes and shipping costs.
+`ParcelDevelopmentView` rolls the same parcel records into
 development/business signals such as buildable housing capacity, buildable job
 capacity, underused and redevelopment candidate parcels, utility readiness,
 environmental constraints, assessed value, and simple customer/labor access
