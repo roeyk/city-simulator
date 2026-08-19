@@ -187,6 +187,10 @@ class ParcelGrid:
     commute_minutes_per_grid_step: float = 2.5
     shipping_cost_per_grid_step: float = 1.25
 
+    @property
+    def coordinate_capacity(self) -> int:
+        return self.width * self.height
+
 
 @dataclass(frozen=True)
 class ParcelOccupancy:
@@ -207,6 +211,8 @@ class Parcel:
     land_use: str = "unspecified"
     natural_cover: str = "unknown"
     development_stage: str = "unknown"
+    reserved: bool = False
+    reserved_for: str = ""
     zoning: ZoningEnvelope = ZoningEnvelope()
     owner_type: str = "unknown"
     owner_id: str = ""

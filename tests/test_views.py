@@ -108,6 +108,17 @@ def test_parcel_development_view_rolls_up_development_and_business_signals():
                 max_housing_units=10,
                 constraints=("utility_unready",),
             ),
+            "outside-city": Parcel(
+                "outside-city",
+                grid_x=10,
+                grid_y=10,
+                reserved=True,
+                reserved_for="neighbor-city",
+                zoning=ZoningEnvelope(allowed_uses=("residential", "commercial")),
+                max_housing_units=500,
+                max_jobs=500,
+                assessed_value=99_000_000,
+            ),
         },
         households=(
             HouseholdAgent(
@@ -140,7 +151,8 @@ def test_parcel_development_view_rolls_up_development_and_business_signals():
         "households",
         "organizations",
     )
-    assert view.parcel_count == 5
+    assert view.parcel_count == 6
+    assert view.reserved_parcels == 1
     assert view.buildable_housing_capacity == 46
     assert view.buildable_job_capacity == 87
     assert view.underused_parcels == 1
@@ -158,6 +170,7 @@ def test_parcel_development_view_exports_plain_values():
 
     assert set(view.as_dict()) == {
         "parcel_count",
+        "reserved_parcels",
         "buildable_housing_capacity",
         "buildable_job_capacity",
         "underused_parcels",

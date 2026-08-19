@@ -250,6 +250,7 @@ class ParcelDevelopmentView(View):
     )
 
     parcel_count: float
+    reserved_parcels: float
     buildable_housing_capacity: float
     buildable_job_capacity: float
     underused_parcels: float
@@ -264,6 +265,7 @@ class ParcelDevelopmentView(View):
     @classmethod
     def derive(cls, state: CityState) -> ParcelDevelopmentView:
         parcels = tuple(state.parcels.values())
+        planning_parcels = tuple(parcel for parcel in parcels if not parcel.reserved)
         household_parcel_ids = tuple(
             household.parcel_id for household in state.households if household.parcel_id
         )
@@ -275,20 +277,25 @@ class ParcelDevelopmentView(View):
         )
         return cls(
             parcel_count=float(len(parcels)),
-            buildable_housing_capacity=sum(_buildable_housing_capacity(parcel) for parcel in parcels),
-            buildable_job_capacity=sum(_buildable_job_capacity(parcel) for parcel in parcels),
-            underused_parcels=sum(1.0 for parcel in parcels if parcel.underused),
+            reserved_parcels=sum(1.0 for parcel in parcels if parcel.reserved),
+            buildable_housing_capacity=sum(
+                _buildable_housing_capacity(parcel) for parcel in planning_parcels
+            ),
+            buildable_job_capacity=sum(
+                _buildable_job_capacity(parcel) for parcel in planning_parcels
+            ),
+            underused_parcels=sum(1.0 for parcel in planning_parcels if parcel.underused),
             redevelopment_candidate_parcels=sum(
-                1.0 for parcel in parcels if _is_redevelopment_candidate(parcel)
+                1.0 for parcel in planning_parcels if _is_redevelopment_candidate(parcel)
             ),
             vacant_or_undeveloped_parcels=sum(
-                1.0 for parcel in parcels if _is_vacant_or_undeveloped(parcel)
+                1.0 for parcel in planning_parcels if _is_vacant_or_undeveloped(parcel)
             ),
-            utility_ready_parcels=sum(1.0 for parcel in parcels if _is_utility_ready(parcel)),
+            utility_ready_parcels=sum(1.0 for parcel in planning_parcels if _is_utility_ready(parcel)),
             environmentally_constrained_parcels=sum(
-                1.0 for parcel in parcels if _is_environmentally_constrained(parcel)
+                1.0 for parcel in planning_parcels if _is_environmentally_constrained(parcel)
             ),
-            assessed_value=sum(parcel.assessed_value for parcel in parcels),
+            assessed_value=sum(parcel.assessed_value for parcel in planning_parcels),
             average_customer_access_steps=_average_nearest_distance(
                 state,
                 organization_parcel_ids,
@@ -304,6 +311,7 @@ class ParcelDevelopmentView(View):
     def as_dict(self) -> dict[str, float]:
         return {
             "parcel_count": self.parcel_count,
+            "reserved_parcels": self.reserved_parcels,
             "buildable_housing_capacity": self.buildable_housing_capacity,
             "buildable_job_capacity": self.buildable_job_capacity,
             "underused_parcels": self.underused_parcels,
@@ -318,6 +326,8 @@ class ParcelDevelopmentView(View):
 
 
 def _buildable_housing_capacity(parcel: Parcel) -> float:
+    if parcel.reserved:
+        return 0.0
     if not _allows_any(parcel, ("residential", "mixed_use")):
         return 0.0
     if _is_environmentally_constrained(parcel):
@@ -326,6 +336,8 @@ def _buildable_housing_capacity(parcel: Parcel) -> float:
 
 
 def _buildable_job_capacity(parcel: Parcel) -> float:
+    if parcel.reserved:
+        return 0.0
     if not _allows_any(parcel, ("commercial", "industrial", "mixed_use", "civic")):
         return 0.0
     if _is_environmentally_constrained(parcel):
@@ -338,6 +350,8 @@ def _allows_any(parcel: Parcel, uses: tuple[str, ...]) -> bool:
 
 
 def _is_redevelopment_candidate(parcel: Parcel) -> bool:
+    if parcel.reserved:
+        return False
     if _is_environmentally_constrained(parcel):
         return False
     has_capacity = (

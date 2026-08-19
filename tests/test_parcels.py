@@ -8,8 +8,11 @@ from city_simulator import (
     ParcelGrid,
     ParcelOccupancy,
     parcel_commute_minutes,
+    parcel_coordinate_capacity_for_area,
     parcel_grid_distance,
+    parcel_grid_for_area,
     parcel_shipping_cost,
+    square_parcel_grid_for_area,
 )
 from city_simulator.scenario import (
     ScenarioError,
@@ -47,6 +50,40 @@ def test_default_sparse_square_grid_has_million_parcel_coordinate_space():
     assert grid.width == 1000
     assert grid.height == 1000
     assert grid.cell_size_meters == 20.0
+    assert grid.coordinate_capacity == 1_000_000
+
+
+def test_area_helpers_round_up_to_whole_parcel_coordinates():
+    assert parcel_coordinate_capacity_for_area(
+        area_square_km=1,
+        cell_size_meters=20,
+    ) == 2500
+    assert square_parcel_grid_for_area(area_square_km=1, cell_size_meters=20) == (50, 50)
+
+    one_square_mile_cells = parcel_coordinate_capacity_for_area(
+        area_square_miles=1,
+        cell_size_meters=20,
+    )
+    one_square_mile_grid = parcel_grid_for_area(area_square_miles=1, cell_size_meters=20)
+
+    assert one_square_mile_cells == 6475
+    assert one_square_mile_grid.width == 81
+    assert one_square_mile_grid.height == 81
+    assert one_square_mile_grid.coordinate_capacity >= one_square_mile_cells
+    assert parcel_grid_for_area(area_square_km=1, cell_size_meters=20).coordinate_capacity == 2500
+
+
+def test_area_helpers_reject_invalid_area_inputs():
+    with pytest.raises(ValueError, match="provide exactly one"):
+        parcel_coordinate_capacity_for_area(
+            area_square_miles=1,
+            area_square_km=1,
+            cell_size_meters=20,
+        )
+    with pytest.raises(ValueError, match="cell_size_meters must be positive"):
+        parcel_coordinate_capacity_for_area(area_square_km=1, cell_size_meters=0)
+    with pytest.raises(ValueError, match="unsupported parcel grid type"):
+        parcel_grid_for_area(area_square_km=1, grid_type="hexagon")
 
 
 def test_grid_shape_is_parameterized_but_distance_supports_square_first():
@@ -135,15 +172,23 @@ def test_city_from_mapping_reads_sparse_square_parcels_and_round_trips(tmp_path,
                         "organization_ids": ["org-1"],
                     },
                 },
-            "p-2": {
-                "grid_x": 4,
-                "grid_y": 2,
-                "neighborhood": "downtown",
-                "land_use": "industrial",
-                "natural_cover": "river",
-                "development_stage": "partly_developed",
-                "occupancy": {"infrastructure_ids": ["road-segment-1"]},
-            },
+                "p-2": {
+                    "grid_x": 4,
+                    "grid_y": 2,
+                    "neighborhood": "downtown",
+                    "land_use": "industrial",
+                    "natural_cover": "river",
+                    "development_stage": "partly_developed",
+                    "occupancy": {"infrastructure_ids": ["road-segment-1"]},
+                },
+                "reserved-neighbor": {
+                    "grid_x": 5,
+                    "grid_y": 2,
+                    "reserved": True,
+                    "reserved_for": "adjacent-city",
+                    "land_use": "residential",
+                    "max_housing_units": 500,
+                },
             },
         }
     )
@@ -160,6 +205,8 @@ def test_city_from_mapping_reads_sparse_square_parcels_and_round_trips(tmp_path,
     assert loaded.parcels["p-2"].natural_cover == "river"
     assert loaded.parcels["p-2"].development_stage == "partly_developed"
     assert loaded.parcels["p-2"].occupancy.infrastructure_ids == ("road-segment-1",)
+    assert loaded.parcels["reserved-neighbor"].reserved
+    assert loaded.parcels["reserved-neighbor"].reserved_for == "adjacent-city"
     assert parcel_commute_minutes(loaded, "p-1", "p-2") == pytest.approx(24)
 
 

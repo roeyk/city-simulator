@@ -53,8 +53,11 @@ from city_simulator.model import (
 )
 from city_simulator.parcels import (
     parcel_commute_minutes,
+    parcel_coordinate_capacity_for_area,
     parcel_grid_distance,
+    parcel_grid_for_area,
     parcel_shipping_cost,
+    square_parcel_grid_for_area,
 )
 from city_simulator.person_generator import (
     COARSE_US_SYNTHETIC_PROFILE,
@@ -183,9 +186,12 @@ __all__ = [
     "load_city",
     "load_scenario",
     "parcel_commute_minutes",
+    "parcel_coordinate_capacity_for_area",
     "parcel_grid_distance",
+    "parcel_grid_for_area",
     "parcel_shipping_cost",
     "simulate",
+    "square_parcel_grid_for_area",
     "starter_city",
     "synthetic_group_profiles_from_mapping",
     "synthetic_population_profile_from_mapping",
