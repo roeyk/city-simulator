@@ -542,6 +542,14 @@ class ModelParameters:
     infrastructure_annual_wear: float = 2.4
     transit_investment_per_infrastructure_point: float = 11_000_000.0
     services_investment_per_infrastructure_point: float = 35_000_000.0
+    infrastructure_pressure_threshold: float = 65.0
+    infrastructure_resident_burden_multiplier: float = 0.28
+    infrastructure_service_disruption_multiplier: float = 0.36
+    infrastructure_organization_disruption_multiplier: float = 0.32
+    housing_pressure_threshold: float = 0.015
+    housing_build_pressure_multiplier: float = 420.0
+    housing_land_constraint_multiplier: float = 520.0
+    housing_business_pressure_multiplier: float = 180.0
     pollution_population_divisor: float = 120_000.0
     pollution_jobs_divisor: float = 18_000.0
     environment_spending_per_pollution_point: float = 9_000_000.0
@@ -551,6 +559,10 @@ class ModelParameters:
     zoning_satisfaction_penalty: float = 3.0
     development_satisfaction_penalty: float = 2.0
     budget_deficit_satisfaction_penalty: float = 8.0
+    fiscal_stress_satisfaction_penalty: float = 0.45
+    unemployment_migration_drag: float = 0.028
+    unemployment_household_buffer: float = 0.45
+    job_growth_migration_bonus: float = 0.18
     base_satisfaction: float = 45.0
     infrastructure_satisfaction_bonus: float = 0.22
     pollution_satisfaction_penalty: float = 0.18

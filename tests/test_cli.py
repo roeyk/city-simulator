@@ -229,7 +229,7 @@ def test_cli_prompts_for_saved_city_when_city_not_supplied(tmp_path, monkeypatch
     output = capsys.readouterr().out
     assert "Saved cities:" in output
     assert "beta" in output
-    assert "2,125" in output
+    assert "2,210" in output
 
 
 def test_cli_play_advances_and_saves_turns(tmp_path, monkeypatch, capsys):

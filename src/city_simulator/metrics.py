@@ -250,7 +250,9 @@ def _sentiment_signals(
             54.0
             + jobs_delta / 250 * sensitivity.sentiment_business
             - unemployment_rate * 85
-            - job_vacancy_rate * 35,
+            - job_vacancy_rate * 35
+            - ledger.get("organization_disruption_risk")
+            - ledger.get("business_housing_pressure"),
             0.0,
             100.0,
         ),
@@ -272,7 +274,11 @@ def _sentiment_signals(
         ),
         "housing_stress": _clamp(100.0 - housing_pressure * 520, 0.0, 100.0),
         "safety": _clamp(100.0 - crime, 0.0, 100.0),
-        "services": service_coverage,
+        "services": _clamp(
+            service_coverage - ledger.get("service_disruption_risk"),
+            0.0,
+            100.0,
+        ),
         "civic_trust": _clamp(
             satisfaction * 0.35
             + service_coverage * 0.3
@@ -284,7 +290,12 @@ def _sentiment_signals(
             100.0,
         ),
         "future_confidence": _clamp(
-            52.0 + growth_rate * 800 + jobs_delta / 280 - unemployment_rate * 95 - pollution * 0.12,
+            52.0
+            + growth_rate * 800
+            + jobs_delta / 280
+            - unemployment_rate * 95
+            - pollution * 0.12
+            - ledger.get("future_confidence_risk"),
             0.0,
             100.0,
         ),

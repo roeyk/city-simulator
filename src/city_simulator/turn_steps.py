@@ -31,6 +31,7 @@ class AnnualTurnContext:
     pollution: float | None = None
     housing_gap: float | None = None
     signal_ledger: SignalLedger | None = None
+    work_pressure: float | None = None
     satisfaction: float | None = None
     population_delta: float | None = None
     population: float | None = None

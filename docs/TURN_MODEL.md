@@ -35,6 +35,7 @@ validate_inputs
 -> development_and_jobs
 -> infrastructure_environment
 -> seasonal_signals
+-> basic_pressure_signals
 -> satisfaction_migration_demographics
 -> labor_market
 -> sentiment
@@ -118,19 +119,44 @@ Produces:
 - `housing_gap`
 - `signal_ledger`
 
-### 6. Satisfaction, Migration, And Demographics
+### 6. Basic Pressure Signals
+
+Adds cross-cutting hardship signals that come from already-computed turn
+conditions. Current rules convert aging infrastructure into
+`infrastructure_decline_pressure`, `resident_infrastructure_burden`,
+`service_disruption_risk`, and `organization_disruption_risk`. Deficit severity
+and persistence become `fiscal_stress`, `civic_trust_risk`, and
+`future_confidence_risk` before satisfaction and sentiment consume those
+channels. Housing demand becomes `housing_growth_pressure`; if residential
+capacity is available it becomes `residential_build_pressure`, otherwise it
+becomes land-constraint and business-housing pressure.
+
+Requires:
+
+- `budget`
+- `expenses`
+- `signal_ledger`
+
+Produces:
+
+- `signal_ledger`
+
+### 7. Satisfaction, Migration, And Demographics
 
 Computes satisfaction, population change, the new population total, updated
 demographic cohorts, and growth rate. Satisfaction responds to services,
-infrastructure, taxes, pollution, housing gap, restrictions, and budget stress.
+infrastructure, taxes, pollution, housing gap, restrictions, and fiscal stress.
 Population responds to satisfaction, housing drag, local influx/outflux rates,
-federal growth effects, tax migration drag, and development restrictions.
+current job growth, federal growth effects, tax migration drag, development
+restrictions, and prior work-access distress. Middle- and high-income household
+buffers soften, but do not erase, unemployment-driven outmigration pressure.
 
 Requires:
 
 - `infrastructure`
 - `pollution`
 - `housing_gap`
+- `signal_ledger`
 
 Produces:
 
@@ -140,11 +166,13 @@ Produces:
 - `demographics`
 - `growth_rate`
 
-### 7. Labor Market
+### 8. Labor Market
 
 Computes labor force, resident employment, unemployment, job vacancies,
 commuters into the city, commuters out of the city, and participation and
-unemployment rates.
+unemployment rates. When unemployment rises above ordinary frictional levels,
+the step emits `work_access_pressure` so reports and LLM controllers can
+distinguish people leaving for work from ordinary population churn.
 
 The source model distinguishes jobs located in the city from resident
 employment. Future regional labor-market work should reconcile suitable local
@@ -160,8 +188,10 @@ Requires:
 Produces:
 
 - `labor_market`
+- `work_pressure`
+- `signal_ledger`
 
-### 8. Sentiment
+### 9. Sentiment
 
 Computes crime, sentiment component signals, and public sentiment.
 
@@ -190,7 +220,7 @@ Produces:
 - `sentiment_signals`
 - `public_sentiment`
 
-### 9. Commit State
+### 10. Commit State
 
 Builds the next `CityState`, stores the derived `CityMetrics`, advances pending
 delayed effects, and adds new delayed effects created from turn signals.
@@ -202,7 +232,7 @@ Produces:
 
 - `next_state`
 
-### 10. Detect Issues
+### 11. Detect Issues
 
 Detects active issues from the committed next state and the turn's
 `SignalLedger`. Compares current issues against the previous issue set so
@@ -269,6 +299,13 @@ Current examples:
   households, organizations, supply nodes, or aggregate holders. It emits
   reorder gaps, reserve gaps, stockout risk, cold-chain failure risk, and
   spoilage risk channels.
+- basic pressure rules currently add fiscal-stress and work-access channels
+  from fiscal balance, issue persistence, unemployment, and household income
+  buffer conditions. They also add infrastructure-aging channels from system
+  condition so reports can explain mounting resident burdens, service
+  disruption, organization disruption, and repair-confidence risk. Housing
+  pressure rules use neighborhood zoning capacity as the current proxy for
+  developable residential land until parcel rollups are available.
 
 ## Delayed Effects
 
