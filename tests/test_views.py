@@ -11,9 +11,13 @@ from city_simulator import (
     LanguageProfile,
     LanguageSkill,
     OrganizationAgent,
+    Parcel,
+    ParcelDevelopmentView,
+    ParcelOccupancy,
     PersonAgent,
     PopulationStructureView,
     ServiceLanguage,
+    ZoningEnvelope,
     language_service_access_score,
 )
 
@@ -43,6 +47,128 @@ def test_population_structure_view_derives_from_city_state():
     assert isclose(view.middle_income_share, 0.5)
     assert isclose(view.high_income_share, 0.25)
     assert isclose(view.dependency_ratio, 80 / 120)
+
+
+def test_parcel_development_view_rolls_up_development_and_business_signals():
+    state = CityState(
+        parcels={
+            "home": Parcel(
+                "home",
+                grid_x=1,
+                grid_y=1,
+                land_use="residential",
+                development_stage="fully_developed",
+                housing_units=30,
+                max_housing_units=30,
+                assessed_value=4_000_000,
+                occupancy=ParcelOccupancy(household_ids=("household-1",)),
+            ),
+            "underused": Parcel(
+                "underused",
+                grid_x=3,
+                grid_y=1,
+                land_use="mixed_use",
+                development_stage="underused",
+                zoning=ZoningEnvelope(allowed_uses=("residential", "commercial", "mixed_use")),
+                housing_units=4,
+                max_housing_units=40,
+                jobs=8,
+                max_jobs=55,
+                assessed_value=2_000_000,
+                vacancy_rate=0.3,
+                underused=True,
+            ),
+            "business": Parcel(
+                "business",
+                grid_x=5,
+                grid_y=2,
+                land_use="commercial",
+                development_stage="fully_developed",
+                zoning=ZoningEnvelope(allowed_uses=("commercial",)),
+                jobs=80,
+                max_jobs=120,
+                assessed_value=8_000_000,
+                occupancy=ParcelOccupancy(organization_ids=("org-1",)),
+            ),
+            "wetland": Parcel(
+                "wetland",
+                grid_x=4,
+                grid_y=4,
+                natural_cover="wetland",
+                development_stage="pristine",
+                zoning=ZoningEnvelope(allowed_uses=("residential",)),
+                max_housing_units=20,
+                assessed_value=500_000,
+            ),
+            "utility-gap": Parcel(
+                "utility-gap",
+                grid_x=9,
+                grid_y=2,
+                development_stage="vacant",
+                max_housing_units=10,
+                constraints=("utility_unready",),
+            ),
+        },
+        households=(
+            HouseholdAgent(
+                "household-1",
+                member_ids=("person-1",),
+                income_band="middle",
+                parcel_id="home",
+            ),
+        ),
+        people=(
+            PersonAgent(
+                "person-1",
+                household_id="household-1",
+                age=34,
+                income_band="middle",
+                parcel_id="home",
+            ),
+        ),
+        organizations=(
+            OrganizationAgent("org-1", organization_type="business", parcel_id="business"),
+        ),
+    )
+
+    view = ParcelDevelopmentView.derive(state)
+
+    assert view.name == "parcel_development"
+    assert view.source_dependencies == (
+        "parcel_grid",
+        "parcels",
+        "households",
+        "organizations",
+    )
+    assert view.parcel_count == 5
+    assert view.buildable_housing_capacity == 46
+    assert view.buildable_job_capacity == 87
+    assert view.underused_parcels == 1
+    assert view.redevelopment_candidate_parcels == 2
+    assert view.vacant_or_undeveloped_parcels == 2
+    assert view.utility_ready_parcels == 4
+    assert view.environmentally_constrained_parcels == 1
+    assert view.assessed_value == 14_500_000
+    assert view.average_customer_access_steps == 5
+    assert view.average_labor_access_steps == 5
+
+
+def test_parcel_development_view_exports_plain_values():
+    view = ParcelDevelopmentView.derive(CityState())
+
+    assert set(view.as_dict()) == {
+        "parcel_count",
+        "buildable_housing_capacity",
+        "buildable_job_capacity",
+        "underused_parcels",
+        "redevelopment_candidate_parcels",
+        "vacant_or_undeveloped_parcels",
+        "utility_ready_parcels",
+        "environmentally_constrained_parcels",
+        "assessed_value",
+        "average_customer_access_steps",
+        "average_labor_access_steps",
+    }
 
 
 def test_inventory_status_view_derives_from_inventory_records():

@@ -304,7 +304,11 @@ fully developed, or redeveloping. People, households, organizations, place
 assets, and infrastructure placeholders can share the same parcel through
 occupancy records or `parcel_id` fields. Distance helpers use square-grid
 Manhattan distance as the first approximation for commute minutes and shipping
-costs.
+costs. `ParcelDevelopmentView` rolls the same parcel records into
+development/business signals such as buildable housing capacity, buildable job
+capacity, underused and redevelopment candidate parcels, utility readiness,
+environmental constraints, assessed value, and simple customer/labor access
+distances.
 
 City and neighborhood files can also include `place_assets`. A place asset is a
 topological civic or economic place such as a school, clinic, hospital, mall,

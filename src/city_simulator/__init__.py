@@ -82,6 +82,7 @@ from city_simulator.synthetic_city import (
 from city_simulator.views import (
     InventoryStatusView,
     LanguageAccessView,
+    ParcelDevelopmentView,
     PopulationStructureView,
     View,
     language_service_access_score,
@@ -143,6 +144,7 @@ __all__ = [
     "OperatingSchedule",
     "OrganizationAgent",
     "Parcel",
+    "ParcelDevelopmentView",
     "ParcelGrid",
     "ParcelOccupancy",
     "PersonAgent",
