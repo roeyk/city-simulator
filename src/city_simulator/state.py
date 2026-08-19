@@ -178,6 +178,58 @@ class ZoningEnvelope:
 
 
 @dataclass(frozen=True)
+class ParcelGrid:
+    grid_type: str = "square"
+    width: int = 1000
+    height: int = 1000
+    cell_size_miles: float = 0.1
+    origin_label: str = ""
+    commute_minutes_per_grid_step: float = 2.5
+    shipping_cost_per_grid_step: float = 1.25
+
+
+@dataclass(frozen=True)
+class ParcelOccupancy:
+    person_ids: tuple[str, ...] = ()
+    household_ids: tuple[str, ...] = ()
+    organization_ids: tuple[str, ...] = ()
+    place_asset_ids: tuple[str, ...] = ()
+    infrastructure_ids: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class Parcel:
+    parcel_id: str
+    grid_x: int
+    grid_y: int
+    neighborhood: str = ""
+    area_acres: float = 0.0
+    land_use: str = "unspecified"
+    natural_cover: str = "unknown"
+    development_stage: str = "unknown"
+    zoning: ZoningEnvelope = ZoningEnvelope()
+    owner_type: str = "unknown"
+    owner_id: str = ""
+    housing_units: float = 0.0
+    max_housing_units: float = 0.0
+    jobs: float = 0.0
+    max_jobs: float = 0.0
+    assessed_value: float = 0.0
+    vacancy_rate: float = 0.0
+    underused: bool = False
+    impervious_surface_share: float = 0.0
+    tree_canopy_share: float = 0.0
+    stormwater_retention: float = 0.0
+    overlays: tuple[str, ...] = ()
+    constraints: tuple[str, ...] = ()
+    occupancy: ParcelOccupancy = ParcelOccupancy()
+
+    @property
+    def coordinate(self) -> tuple[int, int]:
+        return (self.grid_x, self.grid_y)
+
+
+@dataclass(frozen=True)
 class OperatingSchedule:
     schedule_type: str = "unspecified"
     days: tuple[str, ...] = ()
@@ -413,6 +465,7 @@ class PlaceAsset:
     name: str
     asset_type: str
     neighborhood: str | None = None
+    parcel_id: str = ""
     capacity: float = 0.0
     jobs: float = 0.0
     condition: float = 70.0
@@ -446,6 +499,7 @@ class Neighborhood:
     connectivity: dict[str, float] = field(default_factory=dict)
     environmental_exposure: dict[str, float] = field(default_factory=dict)
     service_access: dict[str, float] = field(default_factory=dict)
+    parcel_ids: tuple[str, ...] = ()
     housing_stock: HousingStock = HousingStock()
     housing_assistance: HousingAssistance = HousingAssistance()
     zoning: ZoningEnvelope = ZoningEnvelope()
@@ -465,6 +519,8 @@ class CityState:
     physical_profile: dict[str, dict[str, float] | float] = field(default_factory=dict)
     civic_assets: dict[str, float] = field(default_factory=dict)
     neighborhoods: dict[str, Neighborhood] = field(default_factory=dict)
+    parcel_grid: ParcelGrid = ParcelGrid()
+    parcels: dict[str, Parcel] = field(default_factory=dict)
     place_assets: tuple[PlaceAsset, ...] = ()
     people: tuple[PersonAgent, ...] = ()
     households: tuple[HouseholdAgent, ...] = ()

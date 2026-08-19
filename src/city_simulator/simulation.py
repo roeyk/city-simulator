@@ -312,6 +312,8 @@ def _step_commit_state(context: AnnualTurnContext) -> None:
         physical_profile=context.state.physical_profile,
         civic_assets=context.state.civic_assets,
         neighborhoods=context.state.neighborhoods,
+        parcel_grid=context.state.parcel_grid,
+        parcels=context.state.parcels,
         place_assets=context.state.place_assets,
         people=context.state.people,
         households=context.state.households,

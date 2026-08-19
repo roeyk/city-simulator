@@ -31,6 +31,9 @@ from city_simulator.model import (
     Neighborhood,
     OperatingSchedule,
     OrganizationAgent,
+    Parcel,
+    ParcelGrid,
+    ParcelOccupancy,
     PersonAgent,
     PlaceAsset,
     SectorMarketBalance,
@@ -92,6 +95,12 @@ def city_from_mapping(data: dict[str, Any]) -> CityState:
     neighborhoods_data = data.get("neighborhoods", {})
     if not isinstance(neighborhoods_data, dict):
         raise ScenarioError("city neighborhoods must be an object")
+    parcel_grid_data = data.get("parcel_grid", {})
+    if not isinstance(parcel_grid_data, dict):
+        raise ScenarioError("city parcel_grid must be an object")
+    parcels_data = data.get("parcels", {})
+    if not isinstance(parcels_data, dict):
+        raise ScenarioError("city parcels must be an object")
     place_assets_data = data.get("place_assets", ())
     if not isinstance(place_assets_data, list | tuple):
         raise ScenarioError("city place_assets must be an array")
@@ -153,6 +162,8 @@ def city_from_mapping(data: dict[str, Any]) -> CityState:
             "housing_assistance",
             "revenue_sources",
             "neighborhoods",
+            "parcel_grid",
+            "parcels",
             "place_assets",
             "people",
             "households",
@@ -177,6 +188,12 @@ def city_from_mapping(data: dict[str, Any]) -> CityState:
                 "city revenue_sources",
             ),
             "neighborhoods": neighborhoods,
+            "parcel_grid": _dataclass_from_mapping(
+                ParcelGrid,
+                parcel_grid_data,
+                "city parcel_grid",
+            ),
+            "parcels": _parcels_from_mapping(parcels_data),
             "place_assets": place_assets,
             "people": _people_from_sequence(people_data, "city people"),
             "households": _households_from_sequence(households_data, "city households"),
@@ -229,10 +246,22 @@ def _neighborhoods_from_mapping(data: dict[str, Any]) -> dict[str, Neighborhood]
         neighborhood_data = {
             field_key: field_value
             for field_key, field_value in value.items()
-            if field_key not in {"housing_stock", "housing_assistance", "zoning", "place_assets"}
+            if field_key
+            not in {
+                "housing_stock",
+                "housing_assistance",
+                "zoning",
+                "place_assets",
+                "parcel_ids",
+            }
         }
         if "name" not in neighborhood_data:
             neighborhood_data["name"] = key
+        if "parcel_ids" in value:
+            parcel_ids = value["parcel_ids"]
+            if not isinstance(parcel_ids, list | tuple):
+                raise ScenarioError(f"neighborhood {key} parcel_ids must be an array")
+            neighborhood_data["parcel_ids"] = tuple(parcel_ids)
         if "adjacent_neighborhoods" in neighborhood_data:
             neighborhood_data["adjacent_neighborhoods"] = tuple(
                 neighborhood_data["adjacent_neighborhoods"]
@@ -272,6 +301,51 @@ def _zoning_envelope_from_mapping(data: dict[str, Any], label: str) -> ZoningEnv
     zoning_data = dict(data)
     _tupleize(zoning_data, ("allowed_uses", "overlay_tags", "special_permit_uses"))
     return _dataclass_from_mapping(ZoningEnvelope, zoning_data, label)
+
+
+def _parcels_from_mapping(data: dict[str, Any]) -> dict[str, Parcel]:
+    parcels: dict[str, Parcel] = {}
+    for key, value in data.items():
+        if not isinstance(value, dict):
+            raise ScenarioError(f"parcel {key} must be an object")
+        parcel_data = dict(value)
+        if "parcel_id" not in parcel_data:
+            parcel_data["parcel_id"] = key
+        zoning_data = parcel_data.pop("zoning", {})
+        if not isinstance(zoning_data, dict):
+            raise ScenarioError(f"parcel {key} zoning must be an object")
+        occupancy_data = parcel_data.pop("occupancy", {})
+        if not isinstance(occupancy_data, dict):
+            raise ScenarioError(f"parcel {key} occupancy must be an object")
+        _tupleize(parcel_data, ("overlays", "constraints"))
+        parcels[key] = _dataclass_from_mapping(
+            Parcel,
+            parcel_data
+            | {
+                "zoning": _zoning_envelope_from_mapping(zoning_data, f"parcel {key} zoning"),
+                "occupancy": _parcel_occupancy_from_mapping(
+                    occupancy_data,
+                    f"parcel {key} occupancy",
+                ),
+            },
+            f"parcel {key}",
+        )
+    return parcels
+
+
+def _parcel_occupancy_from_mapping(data: dict[str, Any], label: str) -> ParcelOccupancy:
+    occupancy_data = dict(data)
+    _tupleize(
+        occupancy_data,
+        (
+            "person_ids",
+            "household_ids",
+            "organization_ids",
+            "place_asset_ids",
+            "infrastructure_ids",
+        ),
+    )
+    return _dataclass_from_mapping(ParcelOccupancy, occupancy_data, label)
 
 
 def _place_assets_from_sequence(

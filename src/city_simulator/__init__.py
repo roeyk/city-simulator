@@ -40,6 +40,9 @@ from city_simulator.model import (
     ModelParameters,
     Neighborhood,
     OperatingSchedule,
+    Parcel,
+    ParcelGrid,
+    ParcelOccupancy,
     PlaceAsset,
     SectorMarketBalance,
     SignalLedger,
@@ -47,6 +50,11 @@ from city_simulator.model import (
     ZoningEnvelope,
     active_delayed_effects,
     simulate,
+)
+from city_simulator.parcels import (
+    parcel_commute_minutes,
+    parcel_grid_distance,
+    parcel_shipping_cost,
 )
 from city_simulator.person_generator import (
     COARSE_US_SYNTHETIC_PROFILE,
@@ -134,6 +142,9 @@ __all__ = [
     "Neighborhood",
     "OperatingSchedule",
     "OrganizationAgent",
+    "Parcel",
+    "ParcelGrid",
+    "ParcelOccupancy",
     "PersonAgent",
     "PlaceAsset",
     "PopulationStructureView",
@@ -169,6 +180,9 @@ __all__ = [
     "living_conditions_for",
     "load_city",
     "load_scenario",
+    "parcel_commute_minutes",
+    "parcel_grid_distance",
+    "parcel_shipping_cost",
     "simulate",
     "starter_city",
     "synthetic_group_profiles_from_mapping",

@@ -294,6 +294,18 @@ homeless shelters, transitional housing, permanent supportive housing, and
 homelessness prevention are modeled as assistance or service capacity, not as
 ordinary housing units.
 
+City files can also include a sparse square `parcel_grid`. The default grid is
+1,000 by 1,000 addressable coordinates, but only defined `parcels` are stored.
+Parcels carry `grid_x`/`grid_y` coordinates, neighborhood membership, zoning,
+land use, natural cover such as forest, plains, desert, pond, lake, ocean,
+river, or wetland, and a development stage such as pristine, conserved,
+undeveloped, vacant, agricultural, partly developed, underused, developing,
+fully developed, or redeveloping. People, households, organizations, place
+assets, and infrastructure placeholders can share the same parcel through
+occupancy records or `parcel_id` fields. Distance helpers use square-grid
+Manhattan distance as the first approximation for commute minutes and shipping
+costs.
+
 City and neighborhood files can also include `place_assets`. A place asset is a
 topological civic or economic place such as a school, clinic, hospital, mall,
 mixed-use building, police station, fire station, public works depot, transit

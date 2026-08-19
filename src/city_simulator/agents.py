@@ -210,6 +210,7 @@ class PersonAgent(Agent):
     employment_status: str = "not_in_labor_force"
     health_status: str = "typical"
     neighborhood: str | None = None
+    parcel_id: str = ""
     display_name: str = ""
     role: str = ""
     housing_status: str = ""
@@ -253,6 +254,7 @@ class HouseholdAgent(Agent):
     income_band: str
     tenure: str = "unknown"
     neighborhood: str | None = None
+    parcel_id: str = ""
     housing_status: str = ""
     household_languages: tuple[str, ...] = ()
     debts: tuple[str, ...] = ()
@@ -284,6 +286,7 @@ class OrganizationAgent(Agent):
     organization_type: str
     sector: str = "unspecified"
     neighborhood: str | None = None
+    parcel_id: str = ""
     staff: float = 0.0
     operating_budget: float = 0.0
     display_name: str = ""
