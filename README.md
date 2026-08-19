@@ -1,8 +1,51 @@
 # City Simulator
 
-City Simulator is a deterministic, statistics-first civic systems simulator.
-It is a policy sandbox for defining a city, applying local policies and outside
+City Simulator is a deterministic, statistics-first civic systems simulator. It
+is a policy sandbox for defining a city, applying local policies and outside
 pressures, advancing time, and comparing how civic systems interact.
+
+The project is early but usable from the command line. It can run yearly turns,
+compare scenarios, generate starter cities, generate deterministic synthetic
+test cities, and report active or overcome city issues. The long-term direction
+is a mayoral briefing loop where a human or LLM controller chooses policies,
+sees consequences, and can inspect why outcomes changed.
+
+## Quick Start
+
+```bash
+PYTHONPATH=src python3 -m city_simulator --years 5
+```
+
+Compare scenarios against the same city:
+
+```bash
+PYTHONPATH=src python3 -m city_simulator \
+  --city examples/cities/default.json \
+  --scenario examples/scenarios/housing-first.json \
+  --scenario examples/scenarios/green-transition.json \
+  --scenario examples/scenarios/business-growth.json
+```
+
+Run tests:
+
+```bash
+PYTHONPATH=src pytest -q
+```
+
+## Current Status
+
+- Deterministic yearly simulation and scenario comparison are implemented.
+- Starter-city and synthetic-city generation are implemented.
+- The model includes population, labor, housing, fiscal, sentiment,
+  neighborhood, service, inventory, parcel, and signal-ledger foundations.
+- Sparse parcel grids, parcel capacity rollups, and area-derived grid sizing
+  are in place.
+- Player turn controls, richer reports, zone maps, resident lifecycle, and more
+  detailed infrastructure/logistics systems are active roadmap areas.
+
+## License
+
+City Simulator is licensed under GPLv3. See [LICENSE](LICENSE).
 
 The intended experience is a mayoral briefing backed by transparent numbers:
 not a graphics-first city builder, and not a raw spreadsheet. The simulator
@@ -73,7 +116,7 @@ planning model. It is a deterministic civic-systems sandbox for exploring
 causal chains: broad enough to model interacting city systems, but small enough
 for a person or AI agent to inspect, reason about, and explain.
 
-## Run
+## Run Details
 
 ```bash
 PYTHONPATH=src python3 -m city_simulator --years 5
@@ -158,6 +201,10 @@ PYTHONPATH=src python3 -m city_simulator init-city language-access-test \
   --people 120 \
   --synthetic-profile examples/synthetic-profiles/language-access-stress.json
 ```
+
+Example cities, people, institutions, neighborhoods, and businesses in this
+repository are fictional or synthetic fixtures. They are not intended to
+represent private personal records or calibrated real-world entities.
 
 Run one scenario against a city:
 
